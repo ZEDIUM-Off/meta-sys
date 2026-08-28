@@ -1,6 +1,8 @@
 //! Observable explanations returned after Kernel state transitions.
 
-use crate::{Binding, ComponentInstanceId, EffectId, LifecycleTransition, ResolutionState};
+use crate::{
+    Binding, ComponentInstanceId, EffectId, ExecutionPlan, LifecycleTransition, ResolutionState,
+};
 
 /// Observable graph and lifecycle changes produced by one accepted Event.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,6 +16,8 @@ pub struct TransitionOutcome {
     removed_bindings: Vec<Binding>,
     /// Effects removed with their owning lifecycle.
     removed_effects: Vec<EffectId>,
+    /// Dependency fronts executed while processing the Event.
+    execution_plan: ExecutionPlan,
 }
 
 impl TransitionOutcome {
@@ -24,6 +28,7 @@ impl TransitionOutcome {
             created_bindings: Vec::new(),
             removed_bindings: Vec::new(),
             removed_effects: Vec::new(),
+            execution_plan: ExecutionPlan::new(Vec::new()),
         }
     }
 
@@ -38,6 +43,7 @@ impl TransitionOutcome {
             created_bindings: Vec::new(),
             removed_bindings: Vec::new(),
             removed_effects: Vec::new(),
+            execution_plan: ExecutionPlan::default(),
         }
     }
 
@@ -85,6 +91,11 @@ impl TransitionOutcome {
         self.removed_effects.extend_from_slice(effects);
     }
 
+    /// Records the affected dependency plan executed for this Event.
+    pub(crate) fn set_execution_plan(&mut self, execution_plan: ExecutionPlan) {
+        self.execution_plan = execution_plan;
+    }
+
     /// Returns stable lifecycle transitions in their execution order.
     #[must_use]
     pub fn transitions(&self) -> &[LifecycleTransition] {
@@ -107,5 +118,11 @@ impl TransitionOutcome {
     #[must_use]
     pub fn removed_effects(&self) -> &[EffectId] {
         &self.removed_effects
+    }
+
+    /// Returns ordered dependency fronts executed for this Event.
+    #[must_use]
+    pub const fn execution_plan(&self) -> &ExecutionPlan {
+        &self.execution_plan
     }
 }

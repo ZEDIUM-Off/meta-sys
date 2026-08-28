@@ -15,6 +15,7 @@ mod effect;
 mod effect_lifecycle;
 mod error;
 mod event;
+mod execution_plan;
 mod facet;
 mod facet_lifecycle;
 mod facet_schema;
@@ -40,6 +41,7 @@ pub use driver::{DriverError, DriverProgress, EventLoopDriver, SequentialExecuto
 pub use effect::Effect;
 pub use error::KernelError;
 pub use event::KernelEvent;
+pub use execution_plan::{ExecutionFront, ExecutionPlan, ExecutionWork, RuntimeStart};
 pub use facet::Facet;
 pub use facet_schema::FacetSchema;
 pub use facet_value::{FacetValue, FacetValueKind};

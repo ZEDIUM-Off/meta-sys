@@ -82,4 +82,7 @@ pub enum KernelError {
     /// A Facet targeted an entity not represented in the current System Graph.
     #[error("Facet target does not exist in the current System Graph")]
     UnknownFacetTarget,
+    /// The Runtime exhausted its local Component Runtime identity space.
+    #[error("Component Runtime identity space is exhausted")]
+    RuntimeIdentityExhausted,
 }

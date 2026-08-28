@@ -84,19 +84,47 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
     ) -> Result<TransitionOutcome, KernelError> {
         self.graph.register_pending(definition, instance_id)?;
         let mut outcome = TransitionOutcome::registered_pending(instance_id);
-        while let Some(plan) = self.graph.next_activation_plan() {
-            let runtime_id = ComponentRuntimeId::new(self.next_runtime_id);
-            self.driver
-                .start(plan.instance_id, runtime_id)
-                .map_err(|error| KernelError::DriverStart {
-                    instance_id: plan.instance_id,
-                    error,
-                })?;
-            self.next_runtime_id += 1;
-            self.graph.apply_activation(&plan, runtime_id);
+        let execution_plan = self.graph.affected_activation_plan(instance_id);
+        let inspectable_plan = execution_plan.inspectable();
+        for front in &execution_plan.fronts {
+            self.execute_activation_front(front, &mut outcome)?;
+        }
+        outcome.set_execution_plan(inspectable_plan);
+        Ok(outcome)
+    }
+
+    /// Starts and commits one dependency-free activation frontier.
+    fn execute_activation_front(
+        &mut self,
+        front: &[crate::resolution::ActivationPlan],
+        outcome: &mut TransitionOutcome,
+    ) -> Result<(), KernelError> {
+        let Some(first) = front.first() else {
+            return Ok(());
+        };
+        let mut next_id = self.next_runtime_id;
+        let mut starts = Vec::with_capacity(front.len());
+        for plan in front {
+            starts.push(crate::RuntimeStart::new(
+                plan.instance_id,
+                ComponentRuntimeId::new(next_id),
+            ));
+            next_id = next_id
+                .checked_add(1)
+                .ok_or(KernelError::RuntimeIdentityExhausted)?;
+        }
+        self.driver
+            .start_front(&starts)
+            .map_err(|error| KernelError::DriverStart {
+                instance_id: first.instance_id,
+                error,
+            })?;
+        for (plan, start) in front.iter().zip(starts) {
+            self.graph.apply_activation(plan, start.runtime());
             outcome.record_activation(plan.instance_id, &plan.bindings);
         }
-        Ok(outcome)
+        self.next_runtime_id = next_id;
+        Ok(())
     }
 
     /// Records one Effect after validating its living lifecycle owner.

@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use crate::{ComponentInstanceId, ComponentRuntimeId};
+use crate::{ComponentInstanceId, ComponentRuntimeId, RuntimeStart};
 use thiserror::Error;
 
 /// Observable result of advancing an execution strategy once.
@@ -40,6 +40,21 @@ impl DriverError {
 
 /// Common contract for starting, advancing, and stopping Component execution.
 pub trait EventLoopDriver: std::fmt::Debug {
+    /// Starts one dependency-free frontier, potentially concurrently.
+    ///
+    /// The default adapter preserves deterministic slice order. Drivers may
+    /// overlap entries because the frontier declares them independent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] when any Runtime in the frontier cannot start.
+    fn start_front(&mut self, starts: &[RuntimeStart]) -> Result<(), DriverError> {
+        for start in starts {
+            self.start(start.instance(), start.runtime())?;
+        }
+        Ok(())
+    }
+
     /// Starts one concrete Component Runtime lifecycle.
     ///
     /// # Errors
