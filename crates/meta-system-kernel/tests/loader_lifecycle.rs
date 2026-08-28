@@ -3,7 +3,7 @@
 use meta_system_kernel::{
     ComponentDefinition, ComponentDefinitionId, ComponentInstanceId, ComponentSource,
     DeterministicMaterializer, KernelEvent, KernelRuntime, LoadId, LoadPhase, LoadRecord,
-    LoadRequest, LoadTransition, Loader, LoaderError, LoaderEvent,
+    LoadRejection, LoadRequest, LoadTransition, Loader, LoaderError, LoaderEvent,
 };
 
 /// Builds a deterministic Loader fixture with stable public identities.
@@ -164,7 +164,10 @@ fn rejected_definition_is_terminal_and_inspectable() -> Result<(), LoaderError> 
         .load(load_id)
         .expect("declared load remains inspectable");
     assert_eq!(record.phase(), LoadPhase::Rejected);
-    assert_eq!(record.rejection(), Some("policy denied"));
+    assert_eq!(
+        record.rejection().map(LoadRejection::reason),
+        Some("policy denied")
+    );
     assert_eq!(
         register,
         Err(LoaderError::InvalidTransition {

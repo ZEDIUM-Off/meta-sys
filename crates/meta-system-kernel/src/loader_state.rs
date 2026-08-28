@@ -1,7 +1,8 @@
 //! Inspectable identity and ordered state of one Loader cycle.
 
 use crate::{
-    ComponentDefinition, ComponentInstanceId, ComponentSource, LoadTransition, LoaderError,
+    AddonId, ComponentDefinition, ComponentInstanceId, ComponentSource, LoadRejection,
+    LoadTransition, LoaderError,
 };
 
 /// Identifies one independent Loader lifecycle.
@@ -51,7 +52,7 @@ pub struct LoadRecord {
     /// Complete inspected Definition, absent before `Inspected`.
     definition: Option<ComponentDefinition>,
     /// Inspectable rejection reason when the lifecycle ends Rejected.
-    rejection: Option<String>,
+    rejection: Option<LoadRejection>,
 }
 
 impl LoadRecord {
@@ -93,8 +94,8 @@ impl LoadRecord {
     }
 
     /// Stores an inspectable policy rejection reason.
-    pub(crate) fn set_rejection(&mut self, reason: String) {
-        self.rejection = Some(reason);
+    pub(crate) fn set_rejection(&mut self, reason: String, addon: Option<AddonId>) {
+        self.rejection = Some(LoadRejection::new(addon, reason));
     }
 
     /// Returns the stable Loader lifecycle identity.
@@ -129,7 +130,7 @@ impl LoadRecord {
 
     /// Returns the inspectable rejection reason, when rejected.
     #[must_use]
-    pub fn rejection(&self) -> Option<&str> {
-        self.rejection.as_deref()
+    pub const fn rejection(&self) -> Option<&LoadRejection> {
+        self.rejection.as_ref()
     }
 }

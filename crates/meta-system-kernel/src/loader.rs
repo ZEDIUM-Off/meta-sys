@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 
 use crate::{
     ComponentMaterializer, EventLoopDriver, KernelEvent, LoadId, LoadPhase, LoadRecord,
-    LoadRequest, LoaderError, LoaderEvent, LoaderOutcome,
+    LoadRequest, LoaderDecision, LoaderError, LoaderEvent, LoaderHook, LoaderOutcome,
+    LoaderProposal,
 };
 
 /// Ordered Loader machine backed by one deterministic materializer adapter.
@@ -14,6 +15,8 @@ pub struct Loader<Materializer> {
     materializer: Materializer,
     /// Independent inspectable Loader lifecycles.
     loads: BTreeMap<LoadId, LoadRecord>,
+    /// Active Loader Addon hooks in their declared deterministic order.
+    hooks: Vec<Box<dyn LoaderHook>>,
 }
 
 impl<Materializer: ComponentMaterializer> Loader<Materializer> {
@@ -23,6 +26,7 @@ impl<Materializer: ComponentMaterializer> Loader<Materializer> {
         Self {
             materializer,
             loads: BTreeMap::new(),
+            hooks: Vec::new(),
         }
     }
 
@@ -118,11 +122,27 @@ impl<Materializer: ComponentMaterializer> Loader<Materializer> {
 
     /// Admits the inspected Definition without skipping inspection.
     fn admit(&mut self, id: LoadId) -> Result<LoaderOutcome, LoaderError> {
-        let record = self
-            .loads
-            .get_mut(&id)
-            .ok_or(LoaderError::UnknownLoad(id))?;
+        let record = self.loads.get(&id).ok_or(LoaderError::UnknownLoad(id))?;
         record.require(LoadPhase::Inspected)?;
+        let definition = record
+            .definition()
+            .ok_or(LoaderError::MissingInspectedDefinition(id))?;
+        let proposal = LoaderProposal::new(id, definition);
+        let rejection = self.hooks.iter().find_map(|hook| {
+            if let LoaderDecision::Reject(reason) = hook.evaluate(proposal) {
+                Some((hook.addon(), reason))
+            } else {
+                None
+            }
+        });
+        if let Some((addon, reason)) = rejection {
+            let record = self.loads.get_mut(&id).expect("validated load exists");
+            record.set_rejection(reason, Some(addon));
+            return Ok(LoaderOutcome::transitioned(
+                record.advance(LoadPhase::Rejected),
+            ));
+        }
+        let record = self.loads.get_mut(&id).expect("validated load exists");
         Ok(LoaderOutcome::transitioned(
             record.advance(LoadPhase::Admitted),
         ))
@@ -135,7 +155,7 @@ impl<Materializer: ComponentMaterializer> Loader<Materializer> {
             .get_mut(&id)
             .ok_or(LoaderError::UnknownLoad(id))?;
         record.require(LoadPhase::Inspected)?;
-        record.set_rejection(reason);
+        record.set_rejection(reason, None);
         Ok(LoaderOutcome::transitioned(
             record.advance(LoadPhase::Rejected),
         ))
@@ -177,6 +197,12 @@ impl<Materializer: ComponentMaterializer> Loader<Materializer> {
         Ok(LoaderOutcome::transitioned(
             record.advance(LoadPhase::Ready),
         ))
+    }
+
+    /// Activates one Addon hook for admission decisions not yet completed.
+    pub fn add_hook(&mut self, hook: impl LoaderHook + 'static) {
+        self.hooks.push(Box::new(hook));
+        self.hooks.sort_by_key(|hook| (hook.order(), hook.addon()));
     }
 
     /// Finds one inspectable Loader lifecycle by identity.
