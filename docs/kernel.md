@@ -117,6 +117,8 @@ Un même Addon peut couvrir Loader et System et corréler lui-même ses contribu
 
 Suivant le compromis pragmatique de `cordis-rs`, le bootstrap du Loader peut utiliser le filesystem pour ouvrir une bibliothèque dynamique native. Ce mécanisme privé n’expose aucune Capability filesystem. Le chargement peut déjà exécuter du code natif avant que la Component Definition complète soit inspectable; l’ordre des phases rend ce fait explicite plutôt que de promettre une admission préalable impossible.
 
+Le prototype fixe sa frontière binaire dans [Native Component ABI v1](development/native-component-abi.md). Une bibliothèque de confiance exporte un point d’entrée C versionné et retourne un descripteur C à scalaires fixes et vues immuables. Le Loader conserve le handle natif, valide la version puis copie ce descripteur vers l’unique `ComponentDefinition` Rust complète avant `Inspected`; le descripteur FFI n’est donc ni un modèle concurrent, ni une contribution partielle au System Graph.
+
 Du Rust natif exécuté dans le processus peut contourner les Capabilities déclarées par `std`, FFI ou appels système. Les Requirements gardent leur valeur pour la composition, la substitution et la réutilisation, mais ne forment pas une sandbox. Reconstruire depuis les sources est au plus une politique de chaîne d’approvisionnement. Permissions, politiques, isolation et sécurité relèvent d’Addons ou de l’intégrateur.
 
 ## Modèle commun d’exécution
@@ -205,4 +207,4 @@ Ces choix restent volontairement différés jusqu’à l’implémentation:
 
 - structures de données exactes du scheduler et du Resolver;
 - réglage futur des capacités selon les profils d’intégration;
-- ABI dynamique entre le Loader et une bibliothèque native.
+- évolution et compatibilité des versions futures de l’ABI native.
