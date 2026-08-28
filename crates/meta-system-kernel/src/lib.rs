@@ -27,6 +27,12 @@ mod graph_entity;
 mod graph_view;
 mod identity;
 mod lifecycle_transition;
+mod loader;
+mod loader_error;
+mod loader_event;
+mod loader_outcome;
+mod loader_state;
+mod materializer;
 mod outcome;
 mod removal;
 mod requirement;
@@ -57,6 +63,12 @@ pub use identity::{
     ComponentRuntimeId, ContextId, EffectId, FacetId, FacetSchemaId, RequirementId,
 };
 pub use lifecycle_transition::LifecycleTransition;
+pub use loader::Loader;
+pub use loader_error::LoaderError;
+pub use loader_event::{ComponentSource, LoadRequest, LoaderEvent};
+pub use loader_outcome::{LoadTransition, LoaderOutcome};
+pub use loader_state::{LoadId, LoadPhase, LoadRecord};
+pub use materializer::{ComponentMaterializer, DeterministicMaterializer, MaterializerError};
 pub use outcome::TransitionOutcome;
 pub use requirement::Requirement;
 pub use runtime::KernelRuntime;
