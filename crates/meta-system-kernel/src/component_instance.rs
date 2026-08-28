@@ -36,6 +36,11 @@ impl ComponentInstance {
         }
     }
 
+    /// Marks this occurrence Active after its Bindings and Runtime exist.
+    pub(crate) const fn activate(&mut self) {
+        self.resolution = ResolutionState::Active;
+    }
+
     /// Returns the stable Component Instance identity.
     #[must_use]
     pub const fn id(&self) -> ComponentInstanceId {

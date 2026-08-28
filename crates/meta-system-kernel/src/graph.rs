@@ -3,23 +3,35 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    Binding, ComponentDefinition, ComponentDefinitionId, ComponentInstance, ComponentInstanceId,
-    ComponentRuntime, KernelError, Requirement, RequirementId,
+    Binding, Capability, CapabilityId, ComponentDefinition, ComponentDefinitionId,
+    ComponentInstance, ComponentInstanceId, ComponentRuntime, KernelError, Requirement,
+    RequirementId,
 };
+
+/// A declared Capability together with the Instance that publishes it.
+#[derive(Debug)]
+pub struct CapabilityPlacement {
+    /// Inspectable offer contributed by the provider Definition.
+    pub(super) capability: Capability,
+    /// Living Component Instance that publishes the offer.
+    pub(super) provider_id: ComponentInstanceId,
+}
 
 /// Owned mutable graph state private to one Kernel Runtime.
 #[derive(Debug, Default)]
 pub struct GraphState {
     /// Complete Component declarations indexed by identity.
-    definitions: BTreeMap<ComponentDefinitionId, ComponentDefinition>,
+    pub(super) definitions: BTreeMap<ComponentDefinitionId, ComponentDefinition>,
     /// Living Component occurrences indexed by identity.
-    instances: BTreeMap<ComponentInstanceId, ComponentInstance>,
+    pub(super) instances: BTreeMap<ComponentInstanceId, ComponentInstance>,
     /// Requirements contributed by every declaration.
-    requirements: BTreeMap<RequirementId, Requirement>,
+    pub(super) requirements: BTreeMap<RequirementId, Requirement>,
+    /// Capability offers and their publishing Component Instances.
+    pub(super) capabilities: BTreeMap<CapabilityId, CapabilityPlacement>,
     /// Explicit resolution relations indexed by Requirement identity.
-    bindings: BTreeMap<RequirementId, Binding>,
+    pub(super) bindings: BTreeMap<RequirementId, Binding>,
     /// Living execution state indexed by Component Instance identity.
-    runtimes: BTreeMap<ComponentInstanceId, ComponentRuntime>,
+    pub(super) runtimes: BTreeMap<ComponentInstanceId, ComponentRuntime>,
 }
 
 impl GraphState {
@@ -38,6 +50,15 @@ impl GraphState {
         let definition_id = definition.id();
         for requirement in definition.requirements().iter().cloned() {
             self.requirements.insert(requirement.id(), requirement);
+        }
+        for capability in definition.capabilities().iter().cloned() {
+            self.capabilities.insert(
+                capability.id(),
+                CapabilityPlacement {
+                    capability,
+                    provider_id: instance_id,
+                },
+            );
         }
         self.definitions.insert(definition_id, definition);
         self.instances.insert(
@@ -64,6 +85,13 @@ impl GraphState {
             let id = requirement.id();
             if self.requirements.contains_key(&id) || !event_requirement_ids.insert(id) {
                 return Err(KernelError::DuplicateRequirement(id));
+            }
+        }
+        let mut event_capability_ids = BTreeSet::new();
+        for capability in definition.capabilities() {
+            let id = capability.id();
+            if self.capabilities.contains_key(&id) || !event_capability_ids.insert(id) {
+                return Err(KernelError::DuplicateCapability(id));
             }
         }
         Ok(())
@@ -100,6 +128,15 @@ impl<'graph> SystemGraph<'graph> {
     #[must_use]
     pub fn requirement(&self, id: RequirementId) -> Option<&Requirement> {
         self.state.requirements.get(&id)
+    }
+
+    /// Finds an inspectable Capability by identity.
+    #[must_use]
+    pub fn capability(&self, id: CapabilityId) -> Option<&Capability> {
+        self.state
+            .capabilities
+            .get(&id)
+            .map(|placement| &placement.capability)
     }
 
     /// Finds the explicit Binding resolving a Requirement, when one exists.

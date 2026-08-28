@@ -20,7 +20,7 @@ fn necessary_requirement_without_provider_keeps_instance_pending() {
     let result = runtime.handle(KernelEvent::register_component(definition, instance_id));
 
     // Assert
-    assert_eq!(result, Ok(()));
+    assert!(result.is_ok());
     let graph = runtime.graph();
     assert!(graph.definition(definition_id).is_some());
     assert!(graph.requirement(requirement_id).is_some());
@@ -47,7 +47,7 @@ fn kernel_runtimes_keep_graph_state_isolated() {
     let result = populated_runtime.handle(event);
 
     // Assert
-    assert_eq!(result, Ok(()));
+    assert!(result.is_ok());
     assert!(populated_runtime.graph().instance(instance_id).is_some());
     assert!(isolated_runtime.graph().definition(definition_id).is_none());
     assert!(isolated_runtime.graph().instance(instance_id).is_none());
@@ -66,7 +66,7 @@ fn duplicate_definition_rejects_whole_registration() {
         duplicate_instance_id,
         RequirementId::new(301),
     );
-    assert_eq!(runtime.handle(first), Ok(()));
+    assert!(runtime.handle(first).is_ok());
 
     // Act
     let result = runtime.handle(duplicate);
@@ -101,7 +101,7 @@ fn duplicate_instance_rejects_whole_registration() {
         instance_id,
         RequirementId::new(401),
     );
-    assert_eq!(runtime.handle(first), Ok(()));
+    assert!(runtime.handle(first).is_ok());
 
     // Act
     let result = runtime.handle(duplicate);
@@ -138,7 +138,7 @@ fn duplicate_requirement_rejects_whole_registration() {
     );
     let duplicate = pending_registration(definition_id, instance_id, duplicate_requirement_id);
     let mut runtime = KernelRuntime::new();
-    assert_eq!(runtime.handle(first), Ok(()));
+    assert!(runtime.handle(first).is_ok());
 
     // Act
     let result = runtime.handle(duplicate);

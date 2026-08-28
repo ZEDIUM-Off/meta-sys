@@ -1,6 +1,6 @@
 //! Static and complete declarations of Components.
 
-use crate::{ComponentDefinitionId, Requirement};
+use crate::{Capability, ComponentDefinitionId, Requirement};
 
 /// The complete declarative identity and contributions of a Component.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,6 +9,8 @@ pub struct ComponentDefinition {
     id: ComponentDefinitionId,
     /// Capability needs contributed to the System Graph.
     requirements: Vec<Requirement>,
+    /// Capability offers contributed to the System Graph.
+    capabilities: Vec<Capability>,
 }
 
 impl ComponentDefinition {
@@ -18,7 +20,15 @@ impl ComponentDefinition {
         Self {
             id,
             requirements: Vec::new(),
+            capabilities: Vec::new(),
         }
+    }
+
+    /// Adds one inspectable Capability to this complete declaration.
+    #[must_use = "builder methods return the updated Component Definition"]
+    pub fn with_capability(mut self, capability: Capability) -> Self {
+        self.capabilities.push(capability);
+        self
     }
 
     /// Adds one inspectable Requirement to this complete declaration.
@@ -38,5 +48,11 @@ impl ComponentDefinition {
     #[must_use]
     pub fn requirements(&self) -> &[Requirement] {
         &self.requirements
+    }
+
+    /// Returns every Capability in declaration order.
+    #[must_use]
+    pub fn capabilities(&self) -> &[Capability] {
+        &self.capabilities
     }
 }

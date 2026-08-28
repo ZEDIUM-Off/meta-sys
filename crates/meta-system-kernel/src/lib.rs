@@ -5,25 +5,33 @@
 //! introduced only by independently tested vertical slices.
 
 mod binding;
+mod capability;
 mod component_definition;
 mod component_instance;
 mod component_runtime;
+mod driver;
 mod error;
 mod event;
 mod graph;
 mod identity;
+mod outcome;
 mod requirement;
+mod resolution;
 mod runtime;
 
 pub use binding::Binding;
+pub use capability::Capability;
 pub use component_definition::ComponentDefinition;
 pub use component_instance::{ComponentInstance, ResolutionState};
 pub use component_runtime::ComponentRuntime;
+pub use driver::{DriverError, DriverProgress, EventLoopDriver, SequentialExecutor};
 pub use error::KernelError;
 pub use event::KernelEvent;
 pub use graph::SystemGraph;
 pub use identity::{
-    CapabilityContractId, ComponentDefinitionId, ComponentInstanceId, RequirementId,
+    CapabilityContractId, CapabilityId, ComponentDefinitionId, ComponentInstanceId,
+    ComponentRuntimeId, RequirementId,
 };
+pub use outcome::{LifecycleTransition, TransitionOutcome};
 pub use requirement::Requirement;
 pub use runtime::KernelRuntime;

@@ -1,0 +1,103 @@
+//! Replaceable execution contract and sequential reference adapter.
+
+use std::collections::{BTreeSet, VecDeque};
+
+use crate::{ComponentInstanceId, ComponentRuntimeId};
+use thiserror::Error;
+
+/// Observable result of advancing an execution strategy once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DriverProgress {
+    /// No queued Runtime work was available.
+    Idle,
+    /// One queued Runtime was advanced.
+    Advanced(ComponentInstanceId),
+}
+
+/// A failure reported by an [`EventLoopDriver`] lifecycle operation.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[error("{message}")]
+pub struct DriverError {
+    /// Human-readable context owned by the adapter boundary.
+    message: String,
+}
+
+impl DriverError {
+    /// Creates a matchable Driver failure with adapter-owned context.
+    #[must_use]
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+
+    /// Returns the adapter-provided failure context.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+/// Common contract for starting, advancing, and stopping Component execution.
+pub trait EventLoopDriver: std::fmt::Debug {
+    /// Starts one concrete Component Runtime lifecycle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] if execution resources cannot be created.
+    fn start(
+        &mut self,
+        instance_id: ComponentInstanceId,
+        runtime_id: ComponentRuntimeId,
+    ) -> Result<(), DriverError>;
+
+    /// Advances at most one queued Component Runtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] if the selected Runtime cannot be advanced.
+    fn advance(&mut self) -> Result<DriverProgress, DriverError>;
+
+    /// Stops one Component Runtime and releases Driver-owned execution state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] if the Runtime cannot be stopped cleanly.
+    fn stop(&mut self, instance_id: ComponentInstanceId) -> Result<(), DriverError>;
+}
+
+/// Deterministic reference Driver that advances queued Instances one at a time.
+#[derive(Debug, Default)]
+pub struct SequentialExecutor {
+    /// Instances with live Driver-owned execution state.
+    active: BTreeSet<ComponentInstanceId>,
+    /// FIFO frontier of Instances ready for one advancement.
+    ready: VecDeque<ComponentInstanceId>,
+}
+
+impl EventLoopDriver for SequentialExecutor {
+    fn start(
+        &mut self,
+        instance_id: ComponentInstanceId,
+        _runtime_id: ComponentRuntimeId,
+    ) -> Result<(), DriverError> {
+        if !self.active.insert(instance_id) {
+            return Err(DriverError::new("Component Instance is already started"));
+        }
+        self.ready.push_back(instance_id);
+        Ok(())
+    }
+
+    fn advance(&mut self) -> Result<DriverProgress, DriverError> {
+        Ok(self
+            .ready
+            .pop_front()
+            .map_or(DriverProgress::Idle, DriverProgress::Advanced))
+    }
+
+    fn stop(&mut self, instance_id: ComponentInstanceId) -> Result<(), DriverError> {
+        self.active.remove(&instance_id);
+        self.ready.retain(|queued| *queued != instance_id);
+        Ok(())
+    }
+}
