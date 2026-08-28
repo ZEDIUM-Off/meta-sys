@@ -3,8 +3,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    Binding, CapabilityContractId, ComponentInstanceId, ComponentRuntime, ComponentRuntimeId,
-    ExecutionFront, ExecutionPlan, ExecutionWork, ResolutionState, graph::GraphState,
+    Binding, BindingCandidate, BindingHook, BindingProposal, CapabilityContractId,
+    ComponentInstanceId, ComponentRuntime, ComponentRuntimeId, ExecutionFront, ExecutionPlan,
+    ExecutionWork, KernelError, Requirement, ResolutionState,
+    binding_policy::evaluate_binding_hooks, graph::GraphState,
 };
 
 /// Complete graph mutation required to activate one ready Component Instance.
@@ -46,21 +48,26 @@ impl ActivationExecutionPlan {
 
 impl GraphState {
     /// Plans only pending work reachable from the registered Component Instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KernelError`] when an active Binding hook rejects or returns an
+    /// incompatible provider selection.
     pub(super) fn affected_activation_plan(
         &self,
         seed: ComponentInstanceId,
-    ) -> ActivationExecutionPlan {
+        hooks: &[Box<dyn BindingHook>],
+    ) -> Result<ActivationExecutionPlan, KernelError> {
         let candidates = self.affected_candidates(seed);
-        let plans = candidates
-            .iter()
-            .filter_map(|instance_id| {
-                self.activation_plan(*instance_id, &candidates)
-                    .map(|plan| (*instance_id, plan))
-            })
-            .collect::<BTreeMap<_, _>>();
-        ActivationExecutionPlan {
-            fronts: Self::ordered_fronts(plans),
+        let mut plans = BTreeMap::new();
+        for instance_id in &candidates {
+            if let Some(plan) = self.activation_plan(*instance_id, &candidates, hooks)? {
+                plans.insert(*instance_id, plan);
+            }
         }
+        Ok(ActivationExecutionPlan {
+            fronts: Self::ordered_fronts(plans),
+        })
     }
 
     /// Applies one successfully started activation to the inspectable graph.
@@ -110,24 +117,27 @@ impl GraphState {
         candidates
     }
 
-    /// Builds one activation when every Requirement has an eligible provider.
+    /// Builds one activation when every Requirement has an admitted provider.
     fn activation_plan(
         &self,
         instance_id: ComponentInstanceId,
         candidates: &BTreeSet<ComponentInstanceId>,
-    ) -> Option<ActivationPlan> {
-        let instance = self.instances.get(&instance_id)?;
-        let definition = self.definitions.get(&instance.definition_id())?;
-        let bindings = definition
-            .requirements()
-            .iter()
-            .map(|requirement| {
-                self.select_provider(requirement.contract(), candidates)
-                    .map(|(capability_id, provider_id)| {
-                        Binding::new(requirement.id(), capability_id, provider_id)
-                    })
-            })
-            .collect::<Option<Vec<_>>>()?;
+        hooks: &[Box<dyn BindingHook>],
+    ) -> Result<Option<ActivationPlan>, KernelError> {
+        let Some(instance) = self.instances.get(&instance_id) else {
+            return Ok(None);
+        };
+        let Some(definition) = self.definitions.get(&instance.definition_id()) else {
+            return Ok(None);
+        };
+        let mut bindings = Vec::with_capacity(definition.requirements().len());
+        for requirement in definition.requirements() {
+            let Some(binding) = self.binding_for_requirement(requirement, candidates, hooks)?
+            else {
+                return Ok(None);
+            };
+            bindings.push(binding);
+        }
         let dependencies = bindings
             .iter()
             .map(Binding::provider_id)
@@ -135,51 +145,62 @@ impl GraphState {
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect();
-        Some(ActivationPlan {
+        Ok(Some(ActivationPlan {
             instance_id,
             bindings,
             dependencies,
-        })
+        }))
     }
 
-    /// Selects an Active provider first, then an affected provider candidate.
-    fn select_provider(
+    /// Passes compatible providers through the ordered Addon Binding seam.
+    fn binding_for_requirement(
+        &self,
+        requirement: &Requirement,
+        candidates: &BTreeSet<ComponentInstanceId>,
+        hooks: &[Box<dyn BindingHook>],
+    ) -> Result<Option<Binding>, KernelError> {
+        let compatible = self.compatible_providers(requirement.contract(), candidates);
+        let active_default = compatible.iter().find(|candidate| {
+            self.instances
+                .get(&candidate.provider())
+                .is_some_and(|provider| provider.resolution() == ResolutionState::Active)
+        });
+        let Some(default) = active_default
+            .copied()
+            .or_else(|| compatible.first().copied())
+        else {
+            return Ok(None);
+        };
+        let proposal = BindingProposal::new(
+            requirement.id(),
+            requirement.contract(),
+            compatible,
+            default.capability(),
+        );
+        let selected = evaluate_binding_hooks(hooks, proposal, default)?;
+        Ok(Some(Binding::new(
+            requirement.id(),
+            selected.capability(),
+            selected.provider(),
+        )))
+    }
+
+    /// Collects all matching Active or affected provider candidates.
+    fn compatible_providers(
         &self,
         contract: CapabilityContractId,
         candidates: &BTreeSet<ComponentInstanceId>,
-    ) -> Option<(crate::CapabilityId, ComponentInstanceId)> {
-        self.select_active_provider(contract)
-            .or_else(|| self.select_candidate_provider(contract, candidates))
-    }
-
-    /// Selects the lowest-identity matching Capability from an Active provider.
-    fn select_active_provider(
-        &self,
-        contract: CapabilityContractId,
-    ) -> Option<(crate::CapabilityId, ComponentInstanceId)> {
+    ) -> Vec<BindingCandidate> {
         self.capabilities
             .iter()
-            .find_map(|(capability_id, placement)| {
+            .filter_map(|(capability_id, placement)| {
                 let provider = self.instances.get(&placement.provider_id)?;
                 (placement.capability.contract() == contract
-                    && provider.resolution() == ResolutionState::Active)
-                    .then_some((*capability_id, placement.provider_id))
+                    && (provider.resolution() == ResolutionState::Active
+                        || candidates.contains(&provider.id())))
+                .then_some(BindingCandidate::new(*capability_id, placement.provider_id))
             })
-    }
-
-    /// Selects the lowest-identity matching Capability from affected work.
-    fn select_candidate_provider(
-        &self,
-        contract: CapabilityContractId,
-        candidates: &BTreeSet<ComponentInstanceId>,
-    ) -> Option<(crate::CapabilityId, ComponentInstanceId)> {
-        self.capabilities
-            .iter()
-            .find(|(_, placement)| {
-                placement.capability.contract() == contract
-                    && candidates.contains(&placement.provider_id)
-            })
-            .map(|(capability_id, placement)| (*capability_id, placement.provider_id))
+            .collect()
     }
 
     /// Topologically groups ready work into deterministic independent fronts.

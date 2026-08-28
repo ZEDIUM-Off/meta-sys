@@ -5,6 +5,8 @@
 //! introduced only by independently tested vertical slices.
 
 mod binding;
+mod binding_hook;
+mod binding_policy;
 mod capability;
 mod component_definition;
 mod component_instance;
@@ -30,8 +32,11 @@ mod removal;
 mod requirement;
 mod resolution;
 mod runtime;
+mod runtime_hooks;
 
 pub use binding::Binding;
+pub use binding_hook::{BindingDecision, BindingHook, HookOrder};
+pub use binding_policy::{BindingCandidate, BindingProposal};
 pub use capability::Capability;
 pub use component_definition::ComponentDefinition;
 pub use component_instance::{ComponentInstance, ResolutionState};

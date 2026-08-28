@@ -1,8 +1,8 @@
 //! Matchable failures produced while evolving a Kernel Runtime.
 
 use crate::{
-    CapabilityId, ComponentDefinitionId, ComponentInstanceId, ContextId, DriverError, EffectId,
-    FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId,
+    AddonId, CapabilityId, ComponentDefinitionId, ComponentInstanceId, ContextId, DriverError,
+    EffectId, FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId,
 };
 use thiserror::Error;
 
@@ -85,4 +85,26 @@ pub enum KernelError {
     /// The Runtime exhausted its local Component Runtime identity space.
     #[error("Component Runtime identity space is exhausted")]
     RuntimeIdentityExhausted,
+    /// An active Addon rejected a proposed Binding with an inspectable reason.
+    #[error("Addon {addon:?} rejected Binding for Requirement {requirement:?}: {reason}")]
+    BindingRejected {
+        /// Addon that rejected the Binding proposal.
+        addon: AddonId,
+        /// Requirement whose Binding was rejected.
+        requirement: RequirementId,
+        /// Addon-owned rejection reason.
+        reason: String,
+    },
+    /// An active Addon selected a Capability absent from the compatible proposal.
+    #[error(
+        "Addon {addon:?} selected incompatible Capability {capability:?} for Requirement {requirement:?}"
+    )]
+    InvalidBindingSelection {
+        /// Addon that returned the invalid influence.
+        addon: AddonId,
+        /// Requirement being resolved.
+        requirement: RequirementId,
+        /// Capability absent from the compatible candidates.
+        capability: CapabilityId,
+    },
 }

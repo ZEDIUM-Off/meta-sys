@@ -1,8 +1,8 @@
 //! Public event-processing seam of one isolated Kernel Runtime.
 
 use crate::{
-    ComponentRuntimeId, EventLoopDriver, KernelError, KernelEvent, SequentialExecutor, SystemGraph,
-    TransitionOutcome, graph::GraphState,
+    BindingHook, ComponentRuntimeId, EventLoopDriver, KernelError, KernelEvent, SequentialExecutor,
+    SystemGraph, TransitionOutcome, graph::GraphState,
 };
 
 /// The isolated evaluator and owner of exactly one System Graph.
@@ -14,6 +14,8 @@ pub struct KernelRuntime<Driver = SequentialExecutor> {
     driver: Driver,
     /// Next identity reserved for a successfully started Component Runtime.
     next_runtime_id: u64,
+    /// Active Addon hooks sorted by their declared deterministic order.
+    pub(super) binding_hooks: Vec<Box<dyn BindingHook>>,
 }
 
 impl KernelRuntime<SequentialExecutor> {
@@ -30,6 +32,7 @@ impl Default for KernelRuntime<SequentialExecutor> {
             graph: GraphState::default(),
             driver: SequentialExecutor::default(),
             next_runtime_id: 1,
+            binding_hooks: Vec::new(),
         }
     }
 }
@@ -42,6 +45,7 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
             graph: GraphState::default(),
             driver,
             next_runtime_id: 1,
+            binding_hooks: Vec::new(),
         }
     }
 
@@ -84,7 +88,9 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
     ) -> Result<TransitionOutcome, KernelError> {
         self.graph.register_pending(definition, instance_id)?;
         let mut outcome = TransitionOutcome::registered_pending(instance_id);
-        let execution_plan = self.graph.affected_activation_plan(instance_id);
+        let execution_plan = self
+            .graph
+            .affected_activation_plan(instance_id, &self.binding_hooks)?;
         let inspectable_plan = execution_plan.inspectable();
         for front in &execution_plan.fronts {
             self.execute_activation_front(front, &mut outcome)?;
