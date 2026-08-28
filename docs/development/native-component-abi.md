@@ -52,4 +52,4 @@ Une bibliothèque native s’exécute dans le processus et peut employer `std`, 
 
 ## Vérification
 
-Une fixture `cdylib` exporte l’ABI indépendamment des types Rust de l’hôte. Un test d’intégration parcourt le Loader complet jusqu’à `Ready` et observe la `ComponentDefinition`, ses Requirements et ses Capabilities dans le Kernel Runtime. La gate standard exécute rustfmt, Clippy, les tests, rustdoc et Dylint. Miri est tenté séparément; le chargement dynamique et l’appel FFI ne sont pas interprétables par Miri, donc le test natif s’appuie sur la gate hôte et les invariants explicités ci-dessus.
+Une fixture `cdylib` exporte l’ABI indépendamment des types Rust de l’hôte. Un test d’intégration parcourt le Loader complet jusqu’à `Ready` et observe la `ComponentDefinition`, ses Requirements et ses Capabilities dans le Kernel Runtime. La gate standard exécute rustfmt, Clippy, les tests, rustdoc et Dylint. Un test unitaire fait vérifier par Miri la validation et la copie des vues ABI à partir de tableaux statiques. Miri ne sait pas interpréter `dlopen` ni l’appel FFI dynamique; le parcours natif réel s’appuie donc sur la gate hôte et les invariants explicités ci-dessus.

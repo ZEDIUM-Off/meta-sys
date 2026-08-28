@@ -41,6 +41,12 @@ mod loader_state;
 mod mailbox;
 mod mailbox_policy;
 mod materializer;
+mod native_abi;
+#[allow(
+    unsafe_code,
+    reason = "trusted native bootstrap is isolated and documented by the ABI v1 contract"
+)]
+mod native_materializer;
 mod outcome;
 mod queue_capacity;
 mod removal;
@@ -93,6 +99,11 @@ pub use loader_state::{LoadId, LoadPhase, LoadRecord};
 pub use mailbox::Mailbox;
 pub use mailbox_policy::{MailboxOverflowStrategy, MailboxPolicy};
 pub use materializer::{ComponentMaterializer, DeterministicMaterializer, MaterializerError};
+pub use native_abi::{
+    NATIVE_COMPONENT_ABI_VERSION, NATIVE_COMPONENT_ENTRY_POINT, NativeCapabilityDescriptor,
+    NativeComponentDescriptor, NativeRequirementDescriptor,
+};
+pub use native_materializer::NativeMaterializer;
 pub use outcome::TransitionOutcome;
 pub use queue_capacity::QueueCapacity;
 pub use requirement::Requirement;
