@@ -5,8 +5,9 @@ use std::collections::BTreeSet;
 use meta_system_kernel::{
     ComponentDefinition, ComponentDefinitionId, ComponentInstanceId, ComponentRuntimeId, Delivery,
     DeliveryProgress, DeliveryState, DriverError, DriverProgress, Event, EventId, EventLoopDriver,
-    EventTypeId, KernelError, KernelEvent, KernelRuntime, QueueCapacity, RoomAddress,
-    RoomDeclaration, RoutingContract, SendReceipt, SequentialExecutor, SubscriptionDeclaration,
+    EventTypeId, KernelError, KernelEvent, KernelRuntime, MailboxOverflowStrategy, MailboxPolicy,
+    QueueCapacity, RoomAddress, RoomDeclaration, RoutingContract, SendReceipt, SequentialExecutor,
+    SubscriptionDeclaration,
 };
 
 /// Driver fixture that confirms every accepted Delivery as processed.
@@ -65,10 +66,17 @@ fn configure<Driver: EventLoopDriver>(runtime: &mut KernelRuntime<Driver>, mailb
     let subscriber = ComponentDefinition::new(ComponentDefinitionId::new(2)).with_routing(
         RoutingContract::new()
             .with_subscription(SubscriptionDeclaration::new(room))
-            .with_mailbox_capacity(mailbox),
+            .with_mailbox_policy(MailboxPolicy::new(
+                mailbox,
+                MailboxOverflowStrategy::RejectNew,
+            )),
     );
-    let outsider = ComponentDefinition::new(ComponentDefinitionId::new(3))
-        .with_routing(RoutingContract::new().with_mailbox_capacity(mailbox));
+    let outsider = ComponentDefinition::new(ComponentDefinitionId::new(3)).with_routing(
+        RoutingContract::new().with_mailbox_policy(MailboxPolicy::new(
+            mailbox,
+            MailboxOverflowStrategy::RejectNew,
+        )),
+    );
     register(runtime, owner, ComponentInstanceId::new(1));
     register(runtime, subscriber, ComponentInstanceId::new(2));
     register(runtime, outsider, ComponentInstanceId::new(3));
@@ -147,7 +155,7 @@ fn bounded_mailbox_reports_full_without_retry() -> Result<(), KernelError> {
     let receipt = runtime.send(room, event(2))?;
 
     // Assert
-    assert_eq!(receipt.deliveries()[0].state(), DeliveryState::MailboxFull);
+    assert_eq!(receipt.deliveries()[0].state(), DeliveryState::RejectedFull);
     let graph = runtime.graph();
     let mailbox = graph
         .component_runtime(ComponentInstanceId::new(2))

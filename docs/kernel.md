@@ -146,6 +146,8 @@ Chaque Room possède une file de distribution FIFO bornée. Elle accepte les Eve
 
 Une Subscription distribue vers la Mailbox bornée du Component destinataire. Le Component possède, au travers de l’interface commune, sa stratégie de retrait, de débordement et d’exécution. Le Kernel ne réessaie jamais automatiquement une Delivery; un destinataire peut remettre en file ou renvoyer un Event par les opérations ordinaires.
 
+Pour le prototype, chaque `RoutingContract` déclare un `MailboxPolicy` réunissant une capacité strictement positive et une stratégie de débordement. Le défaut est `RejectNew`: la nouvelle Delivery est refusée et les Deliveries en attente restent intactes. `DropOldest` est l’autre stratégie de référence: la plus ancienne Delivery en attente est retirée et la nouvelle est acceptée une seule fois. Ces deux décisions sont visibles dans le Receipt et ne déclenchent ni retry, ni transaction, ni backpressure globale. Toute remise en file ou tout renvoi ultérieur passe par `send`, `emit` ou `broadcast` comme un Event ordinaire.
+
 La disponibilité de la Room est vérifiée au moment de `send`. Son adresse logique peut survivre à sa désactivation, mais l’envoi échoue tant qu’aucune instance active de la Room ne la porte.
 
 Un Send Receipt est une observation: acceptation par la Room, destinataires ayant reçu l’Event et, lorsque le Driver permet de l’observer, l’ayant traité. Il ne promet ni transaction, ni causalité globale, ni nouvelle tentative.
@@ -202,5 +204,5 @@ La première implémentation est admise si les scénarios suivants passent:
 Ces choix restent volontairement différés jusqu’à l’implémentation:
 
 - structures de données exactes du scheduler et du Resolver;
-- stratégies de débordement par défaut des Rooms et Mailboxes;
+- réglage futur des capacités selon les profils d’intégration;
 - ABI dynamique entre le Loader et une bibliothèque native.

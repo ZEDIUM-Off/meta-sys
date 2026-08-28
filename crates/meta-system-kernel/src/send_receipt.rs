@@ -7,10 +7,10 @@ use crate::{ComponentInstanceId, RoomAddress, RoomSequence};
 pub enum DeliveryState {
     /// The bounded Mailbox accepted the Delivery; processing is unobserved.
     Delivered,
-    /// The Mailbox accepted and the Driver confirmed processing.
-    Processed,
-    /// The bounded Mailbox could not accept this Delivery.
-    MailboxFull,
+    /// The full Mailbox rejected the new Delivery without retry.
+    RejectedFull,
+    /// The Mailbox dropped its oldest pending item and accepted the new one.
+    DeliveredAfterDroppingOldest,
 }
 
 /// Recipient-local observation included in one Send Receipt.
@@ -20,13 +20,19 @@ pub struct DeliveryReceipt {
     recipient: ComponentInstanceId,
     /// Observable Delivery outcome at send time.
     state: DeliveryState,
+    /// Whether the configured Driver confirmed processing at send time.
+    processed: bool,
 }
 
 impl DeliveryReceipt {
     /// Creates one recipient-local Delivery observation.
     #[must_use]
     pub(crate) const fn new(recipient: ComponentInstanceId, state: DeliveryState) -> Self {
-        Self { recipient, state }
+        Self {
+            recipient,
+            state,
+            processed: false,
+        }
     }
 
     /// Returns the subscribed Component recipient.
@@ -46,14 +52,19 @@ impl DeliveryReceipt {
     pub const fn delivered(self) -> bool {
         matches!(
             self.state,
-            DeliveryState::Delivered | DeliveryState::Processed
+            DeliveryState::Delivered | DeliveryState::DeliveredAfterDroppingOldest
         )
     }
 
     /// Reports whether the Driver confirmed processing at send time.
     #[must_use]
     pub const fn processed(self) -> bool {
-        matches!(self.state, DeliveryState::Processed)
+        self.processed
+    }
+
+    /// Records Driver-confirmed processing without hiding placement outcome.
+    pub(crate) const fn mark_processed(&mut self) {
+        self.processed = true;
     }
 }
 
@@ -67,27 +78,6 @@ pub struct SendReceipt {
     sequence: RoomSequence,
     /// Recipient-local Delivery outcomes in deterministic Subscription order.
     deliveries: Vec<DeliveryReceipt>,
-}
-
-/// Complete observation returned after one broadcast distribution.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[must_use = "Broadcast Receipts expose every listener Delivery outcome"]
-pub struct BroadcastReceipt {
-    /// Listener-local Delivery outcomes in deterministic Component order.
-    deliveries: Vec<DeliveryReceipt>,
-}
-
-impl BroadcastReceipt {
-    /// Records every listener-local outcome of one broadcast Event.
-    pub(crate) const fn new(deliveries: Vec<DeliveryReceipt>) -> Self {
-        Self { deliveries }
-    }
-
-    /// Returns every registered listener Delivery outcome.
-    #[must_use]
-    pub fn deliveries(&self) -> &[DeliveryReceipt] {
-        &self.deliveries
-    }
 }
 
 impl SendReceipt {

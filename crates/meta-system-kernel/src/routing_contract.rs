@@ -1,7 +1,7 @@
 //! Complete declarative Event routing contribution of one Component.
 
 use crate::{
-    BroadcastSubscription, EmissionDeclaration, QueueCapacity, RoomDeclaration,
+    BroadcastSubscription, EmissionDeclaration, MailboxPolicy, RoomDeclaration,
     SubscriptionDeclaration,
 };
 
@@ -9,7 +9,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoutingContract {
     /// Explicit bound of each concrete Runtime Mailbox.
-    mailbox_capacity: QueueCapacity,
+    mailbox_policy: MailboxPolicy,
     /// Logical Rooms materialized only while an Instance is Active.
     rooms: Vec<RoomDeclaration>,
     /// Room relations materialized into the active Runtime Mailbox.
@@ -25,7 +25,10 @@ impl RoutingContract {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            mailbox_capacity: QueueCapacity::DEFAULT,
+            mailbox_policy: MailboxPolicy::new(
+                crate::QueueCapacity::DEFAULT,
+                crate::MailboxOverflowStrategy::RejectNew,
+            ),
             rooms: Vec::new(),
             subscriptions: Vec::new(),
             emissions: Vec::new(),
@@ -33,10 +36,10 @@ impl RoutingContract {
         }
     }
 
-    /// Sets the explicit bound of each concrete Runtime Mailbox.
+    /// Sets the complete Component-owned Runtime Mailbox policy.
     #[must_use = "builder methods return the updated Routing Contract"]
-    pub const fn with_mailbox_capacity(mut self, capacity: QueueCapacity) -> Self {
-        self.mailbox_capacity = capacity;
+    pub const fn with_mailbox_policy(mut self, policy: MailboxPolicy) -> Self {
+        self.mailbox_policy = policy;
         self
     }
 
@@ -68,10 +71,10 @@ impl RoutingContract {
         self
     }
 
-    /// Returns the explicit concrete Runtime Mailbox bound.
+    /// Returns the complete Component-owned Runtime Mailbox policy.
     #[must_use]
-    pub const fn mailbox_capacity(&self) -> QueueCapacity {
-        self.mailbox_capacity
+    pub const fn mailbox_policy(&self) -> MailboxPolicy {
+        self.mailbox_policy
     }
 
     /// Returns logical Rooms in declaration order.

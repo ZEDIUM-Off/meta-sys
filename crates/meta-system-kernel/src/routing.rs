@@ -4,9 +4,9 @@ use std::collections::BTreeSet;
 
 use crate::{
     BroadcastReceipt, ComponentDefinition, ComponentInstanceId, ComponentRuntimeId, Delivery,
-    DeliveryProgress, DeliveryReceipt, DeliveryState, Event, EventLoopDriver, EventTypeId,
-    KernelError, Room, RoomAddress, RoomRuntimeId, RoomSequence, SendReceipt, Subscription,
-    graph::GraphState,
+    DeliveryProgress, DeliveryReceipt, Event, EventLoopDriver, EventTypeId, KernelError, Room,
+    RoomAddress, RoomRuntimeId, RoomSequence, SendReceipt, Subscription, graph::GraphState,
+    mailbox::MailboxPlacement,
 };
 
 /// Accepted work from one concrete Room before Mailbox distribution.
@@ -278,19 +278,19 @@ impl GraphState {
         let mut pending = Vec::new();
         for delivery in deliveries {
             let recipient = delivery.recipient();
-            let delivered = self
+            let placement = self
                 .runtimes
                 .get_mut(&recipient)
-                .is_some_and(|runtime| runtime.mailbox_mut().deliver(delivery.clone()));
-            let state = if delivered {
+                .map_or(MailboxPlacement::RejectedFull, |runtime| {
+                    runtime.mailbox_mut().deliver(delivery.clone())
+                });
+            let state = placement.delivery_state();
+            if placement != MailboxPlacement::RejectedFull {
                 pending.push(PendingDelivery {
                     receipt: receipts.len(),
                     delivery,
                 });
-                DeliveryState::Delivered
-            } else {
-                DeliveryState::MailboxFull
-            };
+            }
             receipts.push(DeliveryReceipt::new(recipient, state));
         }
         self.complete_front(driver, &pending, &mut receipts)?;
@@ -331,8 +331,7 @@ impl GraphState {
                 continue;
             };
             runtime.mailbox_mut().mark_processed(&entry.delivery);
-            receipts[entry.receipt] =
-                DeliveryReceipt::new(entry.delivery.recipient(), DeliveryState::Processed);
+            receipts[entry.receipt].mark_processed();
         }
         Ok(())
     }

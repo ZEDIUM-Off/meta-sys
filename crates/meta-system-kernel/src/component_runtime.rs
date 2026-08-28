@@ -1,6 +1,6 @@
 //! Execution state attached only to Active Component Instances.
 
-use crate::{ComponentInstanceId, ComponentRuntimeId, Mailbox, QueueCapacity};
+use crate::{ComponentInstanceId, ComponentRuntimeId, Mailbox, MailboxPolicy};
 
 /// The living execution attached to one Active Component Instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,12 +19,12 @@ impl ComponentRuntime {
     pub(crate) const fn with_mailbox(
         id: ComponentRuntimeId,
         instance_id: ComponentInstanceId,
-        capacity: QueueCapacity,
+        policy: MailboxPolicy,
     ) -> Self {
         Self {
             id,
             instance_id,
-            mailbox: Mailbox::new(capacity),
+            mailbox: Mailbox::new(policy),
         }
     }
 
