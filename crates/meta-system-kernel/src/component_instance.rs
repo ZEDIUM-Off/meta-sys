@@ -41,6 +41,11 @@ impl ComponentInstance {
         self.resolution = ResolutionState::Active;
     }
 
+    /// Returns this occurrence to Pending after lifecycle cleanup.
+    pub(crate) const fn deactivate(&mut self) {
+        self.resolution = ResolutionState::Pending;
+    }
+
     /// Returns the stable Component Instance identity.
     #[must_use]
     pub const fn id(&self) -> ComponentInstanceId {

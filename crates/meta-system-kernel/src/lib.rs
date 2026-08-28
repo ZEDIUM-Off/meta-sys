@@ -10,11 +10,15 @@ mod component_definition;
 mod component_instance;
 mod component_runtime;
 mod driver;
+mod effect;
+mod effect_lifecycle;
 mod error;
 mod event;
 mod graph;
 mod identity;
+mod lifecycle_transition;
 mod outcome;
+mod removal;
 mod requirement;
 mod resolution;
 mod runtime;
@@ -25,13 +29,15 @@ pub use component_definition::ComponentDefinition;
 pub use component_instance::{ComponentInstance, ResolutionState};
 pub use component_runtime::ComponentRuntime;
 pub use driver::{DriverError, DriverProgress, EventLoopDriver, SequentialExecutor};
+pub use effect::Effect;
 pub use error::KernelError;
 pub use event::KernelEvent;
 pub use graph::SystemGraph;
 pub use identity::{
     CapabilityContractId, CapabilityId, ComponentDefinitionId, ComponentInstanceId,
-    ComponentRuntimeId, RequirementId,
+    ComponentRuntimeId, EffectId, RequirementId,
 };
-pub use outcome::{LifecycleTransition, TransitionOutcome};
+pub use lifecycle_transition::LifecycleTransition;
+pub use outcome::TransitionOutcome;
 pub use requirement::Requirement;
 pub use runtime::KernelRuntime;

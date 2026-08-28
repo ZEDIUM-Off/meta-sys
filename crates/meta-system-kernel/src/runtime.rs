@@ -56,13 +56,29 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
     ///
     /// # Errors
     ///
-    /// Returns [`KernelError`] when the Event would duplicate a graph identity
-    /// or the configured Driver rejects Component Runtime startup.
+    /// Returns [`KernelError`] when an Event violates a graph or lifecycle
+    /// invariant, references an unknown Instance, or when the configured Driver
+    /// rejects Component Runtime startup or shutdown. Rejected lifecycle work
+    /// never introduces a third resolution state beyond `Pending` and `Active`.
     pub fn handle(&mut self, event: KernelEvent) -> Result<TransitionOutcome, KernelError> {
-        let KernelEvent::RegisterComponent {
-            definition,
-            instance_id,
-        } = event;
+        match event {
+            KernelEvent::RegisterComponent {
+                definition,
+                instance_id,
+            } => self.handle_registration(definition, instance_id),
+            KernelEvent::RecordEffect { effect } => self.handle_effect(effect),
+            KernelEvent::UnregisterComponent { instance_id } => {
+                self.handle_unregistration(instance_id)
+            }
+        }
+    }
+
+    /// Registers one complete declaration and resolves every ready Instance.
+    fn handle_registration(
+        &mut self,
+        definition: crate::ComponentDefinition,
+        instance_id: crate::ComponentInstanceId,
+    ) -> Result<TransitionOutcome, KernelError> {
         self.graph.register_pending(definition, instance_id)?;
         let mut outcome = TransitionOutcome::registered_pending(instance_id);
         while let Some(plan) = self.graph.next_activation_plan() {
@@ -77,6 +93,52 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
             self.graph.apply_activation(&plan, runtime_id);
             outcome.record_activation(plan.instance_id, &plan.bindings);
         }
+        Ok(outcome)
+    }
+
+    /// Records one Effect after validating its living lifecycle owner.
+    fn handle_effect(&mut self, effect: crate::Effect) -> Result<TransitionOutcome, KernelError> {
+        self.graph.record_effect(effect)?;
+        Ok(TransitionOutcome::empty())
+    }
+
+    /// Stops affected Runtimes and applies complete lifecycle-owned cleanup.
+    fn handle_unregistration(
+        &mut self,
+        instance_id: crate::ComponentInstanceId,
+    ) -> Result<TransitionOutcome, KernelError> {
+        let plan = self.graph.removal_plan(instance_id)?;
+        for consumer in &plan.consumers {
+            self.driver
+                .stop(consumer.instance_id)
+                .map_err(|error| KernelError::DriverStop {
+                    instance_id: consumer.instance_id,
+                    error,
+                })?;
+        }
+        if plan.previous == crate::ResolutionState::Active {
+            self.driver
+                .stop(plan.instance_id)
+                .map_err(|error| KernelError::DriverStop {
+                    instance_id: plan.instance_id,
+                    error,
+                })?;
+        }
+        let mut outcome = TransitionOutcome::empty();
+        for consumer in &plan.consumers {
+            outcome.record_deactivation(
+                consumer.instance_id,
+                &consumer.bindings,
+                &consumer.effects,
+            );
+        }
+        outcome.record_removal(
+            plan.instance_id,
+            plan.previous,
+            &plan.own_bindings,
+            &plan.effects,
+        );
+        self.graph.apply_removal(&plan);
         Ok(outcome)
     }
 

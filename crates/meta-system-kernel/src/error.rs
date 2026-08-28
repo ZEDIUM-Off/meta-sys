@@ -1,6 +1,8 @@
 //! Matchable failures produced while evolving a Kernel Runtime.
 
-use crate::{CapabilityId, ComponentDefinitionId, ComponentInstanceId, DriverError, RequirementId};
+use crate::{
+    CapabilityId, ComponentDefinitionId, ComponentInstanceId, DriverError, EffectId, RequirementId,
+};
 use thiserror::Error;
 
 /// A violation that prevents an Event from changing the System Graph.
@@ -22,6 +24,24 @@ pub enum KernelError {
     #[error("could not start Component Instance {instance_id:?}")]
     DriverStart {
         /// Component Instance whose execution failed to start.
+        instance_id: ComponentInstanceId,
+        /// Failure reported by the configured Driver.
+        #[source]
+        error: DriverError,
+    },
+    /// The Event referenced a Component Instance absent from this Runtime.
+    #[error("Component Instance {0:?} does not exist")]
+    UnknownComponentInstance(ComponentInstanceId),
+    /// The Event attempted to insert an Effect identity already in the graph.
+    #[error("Effect {0:?} already exists")]
+    DuplicateEffect(EffectId),
+    /// An Effect can only be introduced by an Active lifecycle owner.
+    #[error("Component Instance {0:?} is not Active and cannot own a living Effect")]
+    InactiveEffectOwner(ComponentInstanceId),
+    /// The configured Driver could not stop execution for a deactivating Instance.
+    #[error("could not stop Component Instance {instance_id:?}")]
+    DriverStop {
+        /// Component Instance whose execution failed to stop.
         instance_id: ComponentInstanceId,
         /// Failure reported by the configured Driver.
         #[source]

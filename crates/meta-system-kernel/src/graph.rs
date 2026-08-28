@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     Binding, Capability, CapabilityId, ComponentDefinition, ComponentDefinitionId,
-    ComponentInstance, ComponentInstanceId, ComponentRuntime, KernelError, Requirement,
-    RequirementId,
+    ComponentInstance, ComponentInstanceId, ComponentRuntime, Effect, EffectId, KernelError,
+    Requirement, RequirementId,
 };
 
 /// A declared Capability together with the Instance that publishes it.
@@ -32,6 +32,8 @@ pub struct GraphState {
     pub(super) bindings: BTreeMap<RequirementId, Binding>,
     /// Living execution state indexed by Component Instance identity.
     pub(super) runtimes: BTreeMap<ComponentInstanceId, ComponentRuntime>,
+    /// Living Effects indexed by identity and governed by their owner lifecycle.
+    pub(super) effects: BTreeMap<EffectId, Effect>,
 }
 
 impl GraphState {
@@ -149,5 +151,11 @@ impl<'graph> SystemGraph<'graph> {
     #[must_use]
     pub fn component_runtime(&self, id: ComponentInstanceId) -> Option<&ComponentRuntime> {
         self.state.runtimes.get(&id)
+    }
+
+    /// Finds a living lifecycle-owned Effect by identity.
+    #[must_use]
+    pub fn effect(&self, id: EffectId) -> Option<&Effect> {
+        self.state.effects.get(&id)
     }
 }

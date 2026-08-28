@@ -71,3 +71,15 @@ impl ComponentRuntimeId {
         Self(value)
     }
 }
+
+/// Identifies one living Effect owned by a Component Instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EffectId(u64);
+
+impl EffectId {
+    /// Creates an opaque Effect identity from a host-provided value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}

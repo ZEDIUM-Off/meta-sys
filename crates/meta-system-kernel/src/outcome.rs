@@ -1,51 +1,6 @@
 //! Observable explanations returned after Kernel state transitions.
 
-use crate::{Binding, ComponentInstanceId, ResolutionState};
-
-/// One observable resolution-state change caused by an Event.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LifecycleTransition {
-    /// Component Instance whose state changed.
-    instance_id: ComponentInstanceId,
-    /// Stable state before the transition, absent for a new Instance.
-    previous: Option<ResolutionState>,
-    /// Stable state after the transition.
-    current: ResolutionState,
-}
-
-impl LifecycleTransition {
-    /// Describes one completed stable-state transition.
-    #[must_use]
-    pub(crate) const fn new(
-        instance_id: ComponentInstanceId,
-        previous: Option<ResolutionState>,
-        current: ResolutionState,
-    ) -> Self {
-        Self {
-            instance_id,
-            previous,
-            current,
-        }
-    }
-
-    /// Returns the Component Instance affected by this transition.
-    #[must_use]
-    pub const fn instance_id(&self) -> ComponentInstanceId {
-        self.instance_id
-    }
-
-    /// Returns the prior stable state, or `None` for a new Instance.
-    #[must_use]
-    pub const fn previous(&self) -> Option<ResolutionState> {
-        self.previous
-    }
-
-    /// Returns the stable state reached by the transition.
-    #[must_use]
-    pub const fn current(&self) -> ResolutionState {
-        self.current
-    }
-}
+use crate::{Binding, ComponentInstanceId, EffectId, LifecycleTransition, ResolutionState};
 
 /// Observable graph and lifecycle changes produced by one accepted Event.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,18 +10,34 @@ pub struct TransitionOutcome {
     transitions: Vec<LifecycleTransition>,
     /// Bindings created while resolving affected Instances.
     created_bindings: Vec<Binding>,
+    /// Bindings removed while deactivating affected Instances.
+    removed_bindings: Vec<Binding>,
+    /// Effects removed with their owning lifecycle.
+    removed_effects: Vec<EffectId>,
 }
 
 impl TransitionOutcome {
+    /// Creates an accepted outcome with no lifecycle or Binding change.
+    pub(crate) const fn empty() -> Self {
+        Self {
+            transitions: Vec::new(),
+            created_bindings: Vec::new(),
+            removed_bindings: Vec::new(),
+            removed_effects: Vec::new(),
+        }
+    }
+
     /// Creates the initial Pending transition for a registered Instance.
     pub(crate) fn registered_pending(instance_id: ComponentInstanceId) -> Self {
         Self {
             transitions: vec![LifecycleTransition::new(
                 instance_id,
                 None,
-                ResolutionState::Pending,
+                Some(ResolutionState::Pending),
             )],
             created_bindings: Vec::new(),
+            removed_bindings: Vec::new(),
+            removed_effects: Vec::new(),
         }
     }
 
@@ -79,9 +50,39 @@ impl TransitionOutcome {
         self.transitions.push(LifecycleTransition::new(
             instance_id,
             Some(ResolutionState::Pending),
-            ResolutionState::Active,
+            Some(ResolutionState::Active),
         ));
         self.created_bindings.extend_from_slice(bindings);
+    }
+
+    /// Records cleanup that returned one consumer from Active to Pending.
+    pub(crate) fn record_deactivation(
+        &mut self,
+        instance_id: ComponentInstanceId,
+        bindings: &[Binding],
+        effects: &[EffectId],
+    ) {
+        self.transitions.push(LifecycleTransition::new(
+            instance_id,
+            Some(ResolutionState::Active),
+            Some(ResolutionState::Pending),
+        ));
+        self.removed_bindings.extend_from_slice(bindings);
+        self.removed_effects.extend_from_slice(effects);
+    }
+
+    /// Records disappearance of one Component Instance after cleanup.
+    pub(crate) fn record_removal(
+        &mut self,
+        instance_id: ComponentInstanceId,
+        previous: ResolutionState,
+        bindings: &[Binding],
+        effects: &[EffectId],
+    ) {
+        self.transitions
+            .push(LifecycleTransition::new(instance_id, Some(previous), None));
+        self.removed_bindings.extend_from_slice(bindings);
+        self.removed_effects.extend_from_slice(effects);
     }
 
     /// Returns stable lifecycle transitions in their execution order.
@@ -94,5 +95,17 @@ impl TransitionOutcome {
     #[must_use]
     pub fn created_bindings(&self) -> &[Binding] {
         &self.created_bindings
+    }
+
+    /// Returns Bindings removed while processing the Event.
+    #[must_use]
+    pub fn removed_bindings(&self) -> &[Binding] {
+        &self.removed_bindings
+    }
+
+    /// Returns Effect identities removed with their owning lifecycle.
+    #[must_use]
+    pub fn removed_effects(&self) -> &[EffectId] {
+        &self.removed_effects
     }
 }

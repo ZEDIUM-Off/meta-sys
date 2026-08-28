@@ -61,7 +61,7 @@ fn assert_activation_outcome(outcome: &TransitionOutcome, consumer_id: Component
     assert!(outcome.transitions().iter().any(|transition| {
         transition.instance_id() == consumer_id
             && transition.previous() == Some(ResolutionState::Pending)
-            && transition.current() == ResolutionState::Active
+            && transition.current() == Some(ResolutionState::Active)
     }));
 }
 
