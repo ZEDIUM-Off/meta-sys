@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use crate::{ComponentInstanceId, ComponentRuntimeId, RuntimeStart};
+use crate::{ComponentInstanceId, ComponentRuntimeId, Delivery, DeliveryProgress, RuntimeStart};
 use thiserror::Error;
 
 /// Observable result of advancing an execution strategy once.
@@ -72,6 +72,18 @@ pub trait EventLoopDriver: std::fmt::Debug {
     ///
     /// Returns [`DriverError`] if the selected Runtime cannot be advanced.
     fn advance(&mut self) -> Result<DriverProgress, DriverError>;
+
+    /// Processes one accepted Delivery when the adapter can observe completion.
+    ///
+    /// The default leaves processing unobserved and the Delivery pending in its
+    /// Component Runtime Mailbox.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] when observable processing fails.
+    fn process_delivery(&mut self, _delivery: &Delivery) -> Result<DeliveryProgress, DriverError> {
+        Ok(DeliveryProgress::Unobserved)
+    }
 
     /// Stops one Component Runtime and releases Driver-owned execution state.
     ///

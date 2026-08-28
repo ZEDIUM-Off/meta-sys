@@ -9,9 +9,9 @@ use crate::{
 #[derive(Debug)]
 pub struct KernelRuntime<Driver = SequentialExecutor> {
     /// Mutable graph state owned exclusively by this Runtime.
-    graph: GraphState,
+    pub(super) graph: GraphState,
     /// Interchangeable execution strategy selected for this Runtime.
-    driver: Driver,
+    pub(super) driver: Driver,
     /// Next identity reserved for a successfully started Component Runtime.
     next_runtime_id: u64,
     /// Active Addon hooks sorted by their declared deterministic order.

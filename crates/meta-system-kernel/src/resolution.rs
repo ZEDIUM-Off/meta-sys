@@ -80,12 +80,20 @@ impl GraphState {
             self.bindings
                 .insert(binding.requirement_id(), binding.clone());
         }
+        let mailbox_capacity = self
+            .instances
+            .get(&plan.instance_id)
+            .and_then(|instance| self.definitions.get(&instance.definition_id()))
+            .map_or(crate::QueueCapacity::DEFAULT, |definition| {
+                definition.mailbox_capacity()
+            });
         if let Some(instance) = self.instances.get_mut(&plan.instance_id) {
             instance.activate();
             self.runtimes.insert(
                 plan.instance_id,
-                ComponentRuntime::new(runtime_id, plan.instance_id),
+                ComponentRuntime::with_mailbox(runtime_id, plan.instance_id, mailbox_capacity),
             );
+            self.activate_routing(plan.instance_id, runtime_id);
         }
     }
 

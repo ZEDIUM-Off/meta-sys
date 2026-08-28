@@ -3,7 +3,8 @@
 use crate::{
     Binding, Capability, CapabilityId, ComponentDefinition, ComponentDefinitionId,
     ComponentInstance, ComponentInstanceId, ComponentRuntime, Context, ContextId, Effect, EffectId,
-    Facet, FacetId, FacetSchema, FacetSchemaId, Requirement, RequirementId, graph::GraphState,
+    Facet, FacetId, FacetSchema, FacetSchemaId, Requirement, RequirementId, Room, RoomAddress,
+    graph::GraphState,
 };
 
 /// A read-only observation of one Kernel Runtime's current System Graph.
@@ -81,5 +82,11 @@ impl<'graph> SystemGraph<'graph> {
     #[must_use]
     pub fn facet(&self, id: FacetId) -> Option<&Facet> {
         self.state.facets.get(&id)
+    }
+
+    /// Finds the concrete Active Room carrying one logical address.
+    #[must_use]
+    pub fn room(&self, address: RoomAddress) -> Option<&Room> {
+        self.state.rooms.get(&address)
     }
 }

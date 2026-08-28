@@ -2,7 +2,7 @@
 
 use crate::{
     AddonId, CapabilityId, ComponentDefinitionId, ComponentInstanceId, ContextId, DriverError,
-    EffectId, FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId,
+    EffectId, FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId, RoomAddress,
 };
 use thiserror::Error;
 
@@ -107,4 +107,28 @@ pub enum KernelError {
         /// Capability absent from the compatible candidates.
         capability: CapabilityId,
     },
+    /// No Active concrete Room currently carries the logical address.
+    #[error("logical Room {0:?} is unavailable")]
+    UnavailableRoom(RoomAddress),
+    /// A concrete Room could not accept beyond its declared queue bound.
+    #[error("Room {0:?} distribution queue is full")]
+    RoomQueueFull(RoomAddress),
+    /// A concrete Room exhausted its local FIFO sequence space.
+    #[error("Room {0:?} exhausted its FIFO sequence space")]
+    RoomSequenceExhausted(RoomAddress),
+    /// A Driver failed while processing one accepted Delivery.
+    #[error("Driver could not process Delivery for {recipient:?}")]
+    DriverDelivery {
+        /// Component Runtime whose Mailbox accepted the Delivery.
+        recipient: ComponentInstanceId,
+        /// Failure reported by the configured Driver.
+        #[source]
+        error: DriverError,
+    },
+    /// A Component Definition redeclared an existing logical Room address.
+    #[error("logical Room {0:?} is already declared")]
+    DuplicateRoomAddress(RoomAddress),
+    /// A Component Definition repeated the same Room Subscription.
+    #[error("Subscription to logical Room {0:?} is duplicated in one Definition")]
+    DuplicateSubscription(RoomAddress),
 }

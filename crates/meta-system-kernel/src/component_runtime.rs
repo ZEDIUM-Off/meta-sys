@@ -1,6 +1,6 @@
 //! Execution state attached only to Active Component Instances.
 
-use crate::{ComponentInstanceId, ComponentRuntimeId};
+use crate::{ComponentInstanceId, ComponentRuntimeId, Mailbox, QueueCapacity};
 
 /// The living execution attached to one Active Component Instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,13 +9,23 @@ pub struct ComponentRuntime {
     id: ComponentRuntimeId,
     /// Component Instance whose execution this object represents.
     instance_id: ComponentInstanceId,
+    /// Bounded Delivery queue owned by this concrete Runtime lifecycle.
+    mailbox: Mailbox,
 }
 
 impl ComponentRuntime {
-    /// Creates execution state after its Driver has started successfully.
+    /// Creates execution state with its Component-declared Mailbox bound.
     #[must_use]
-    pub(crate) const fn new(id: ComponentRuntimeId, instance_id: ComponentInstanceId) -> Self {
-        Self { id, instance_id }
+    pub(crate) const fn with_mailbox(
+        id: ComponentRuntimeId,
+        instance_id: ComponentInstanceId,
+        capacity: QueueCapacity,
+    ) -> Self {
+        Self {
+            id,
+            instance_id,
+            mailbox: Mailbox::new(capacity),
+        }
     }
 
     /// Returns the identity of this concrete execution lifecycle.
@@ -28,5 +38,16 @@ impl ComponentRuntime {
     #[must_use]
     pub const fn instance_id(&self) -> ComponentInstanceId {
         self.instance_id
+    }
+
+    /// Returns this Runtime's bounded aggregate Delivery queue.
+    #[must_use]
+    pub const fn mailbox(&self) -> &Mailbox {
+        &self.mailbox
+    }
+
+    /// Returns mutable Mailbox state to the private routing engine.
+    pub(crate) const fn mailbox_mut(&mut self) -> &mut Mailbox {
+        &mut self.mailbox
     }
 }

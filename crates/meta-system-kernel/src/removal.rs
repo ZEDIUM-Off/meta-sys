@@ -87,6 +87,7 @@ impl GraphState {
         for context_id in &plan.contexts {
             self.contexts.remove(context_id);
         }
+        self.deactivate_routing(plan.instance_id);
         self.runtimes.remove(&plan.instance_id);
         self.instances.remove(&plan.instance_id);
         if let Some(definition) = self.definitions.remove(&plan.definition_id) {
@@ -252,6 +253,7 @@ impl GraphState {
         for effect_id in &consumer.effects {
             self.effects.remove(effect_id);
         }
+        self.deactivate_routing(consumer.instance_id);
         self.runtimes.remove(&consumer.instance_id);
         if let Some(instance) = self.instances.get_mut(&consumer.instance_id) {
             instance.deactivate();

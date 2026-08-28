@@ -5,7 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{
     Binding, Capability, CapabilityId, ComponentDefinition, ComponentDefinitionId,
     ComponentInstance, ComponentInstanceId, ComponentRuntime, Context, ContextId, Effect, EffectId,
-    Facet, FacetId, FacetSchema, FacetSchemaId, KernelError, Requirement, RequirementId,
+    Facet, FacetId, FacetSchema, FacetSchemaId, KernelError, Requirement, RequirementId, Room,
+    RoomAddress, Subscription,
 };
 
 /// A declared Capability together with the Instance that publishes it.
@@ -40,6 +41,10 @@ pub struct GraphState {
     pub(super) facet_schemas: BTreeMap<FacetSchemaId, FacetSchema>,
     /// Typed Facet attachments indexed by identity.
     pub(super) facets: BTreeMap<FacetId, Facet>,
+    /// Concrete Rooms carried only by Active owner Runtimes.
+    pub(super) rooms: BTreeMap<RoomAddress, Room>,
+    /// Living declared relations to Active Component Runtime Mailboxes.
+    pub(super) subscriptions: Vec<Subscription>,
 }
 
 impl GraphState {
@@ -55,6 +60,7 @@ impl GraphState {
         instance_id: ComponentInstanceId,
     ) -> Result<(), KernelError> {
         self.validate_registration(&definition, instance_id)?;
+        self.validate_routing_registration(&definition)?;
         let definition_id = definition.id();
         for requirement in definition.requirements().iter().cloned() {
             self.requirements.insert(requirement.id(), requirement);
