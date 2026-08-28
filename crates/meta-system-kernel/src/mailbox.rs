@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use crate::{Delivery, QueueCapacity, RoomSequence};
+use crate::{Delivery, QueueCapacity};
 
 /// Bounded aggregate of Deliveries received from subscribed Rooms.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,11 +33,11 @@ impl Mailbox {
     }
 
     /// Removes a Delivery synchronously confirmed as processed by the Driver.
-    pub(crate) fn mark_processed(&mut self, sequence: RoomSequence) {
+    pub(crate) fn mark_processed(&mut self, processed: &Delivery) {
         if self
             .deliveries
             .front()
-            .is_some_and(|delivery| delivery.sequence() == sequence)
+            .is_some_and(|delivery| delivery == processed)
         {
             self.deliveries.pop_front();
         }

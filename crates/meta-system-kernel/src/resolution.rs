@@ -85,7 +85,7 @@ impl GraphState {
             .get(&plan.instance_id)
             .and_then(|instance| self.definitions.get(&instance.definition_id()))
             .map_or(crate::QueueCapacity::DEFAULT, |definition| {
-                definition.mailbox_capacity()
+                definition.routing().mailbox_capacity()
             });
         if let Some(instance) = self.instances.get_mut(&plan.instance_id) {
             instance.activate();

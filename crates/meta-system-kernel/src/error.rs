@@ -2,7 +2,8 @@
 
 use crate::{
     AddonId, CapabilityId, ComponentDefinitionId, ComponentInstanceId, ContextId, DriverError,
-    EffectId, FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId, RoomAddress,
+    EffectId, EventTypeId, FacetId, FacetSchemaId, FacetValueKind, GraphEntityKind, RequirementId,
+    RoomAddress,
 };
 use thiserror::Error;
 
@@ -131,4 +132,29 @@ pub enum KernelError {
     /// A Component Definition repeated the same Room Subscription.
     #[error("Subscription to logical Room {0:?} is duplicated in one Definition")]
     DuplicateSubscription(RoomAddress),
+    /// An emit source has no Active Component Runtime.
+    #[error("Component Instance {0:?} cannot emit while inactive")]
+    InactiveEventSource(ComponentInstanceId),
+    /// An Active Component contract does not declare this emitted Event type.
+    #[error("Component Instance {emitter:?} does not declare emitted Event type {event_type:?}")]
+    UndeclaredEmission {
+        /// Active Component Instance attempting to emit.
+        emitter: ComponentInstanceId,
+        /// Event payload contract absent from its Routing Contract.
+        event_type: EventTypeId,
+    },
+    /// A Driver returned a processing vector inconsistent with the frontier.
+    #[error("Driver returned {actual} Delivery results for a frontier of {expected}")]
+    InvalidDeliveryFrontSize {
+        /// Number of independent Deliveries submitted to the Driver.
+        expected: usize,
+        /// Number of processing observations returned by the Driver.
+        actual: usize,
+    },
+    /// An emit route references a Room absent from its owning Routing Contract.
+    #[error("emit route references undeclared logical Room {0:?}")]
+    UndeclaredEmissionRoom(RoomAddress),
+    /// A Routing Contract repeats one broadcast Event listener declaration.
+    #[error("broadcast listener for Event type {0:?} is duplicated")]
+    DuplicateBroadcastSubscription(EventTypeId),
 }

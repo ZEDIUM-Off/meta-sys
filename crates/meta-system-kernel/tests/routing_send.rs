@@ -6,7 +6,7 @@ use meta_system_kernel::{
     ComponentDefinition, ComponentDefinitionId, ComponentInstanceId, ComponentRuntimeId, Delivery,
     DeliveryProgress, DeliveryState, DriverError, DriverProgress, Event, EventId, EventLoopDriver,
     EventTypeId, KernelError, KernelEvent, KernelRuntime, QueueCapacity, RoomAddress,
-    RoomDeclaration, SendReceipt, SequentialExecutor, SubscriptionDeclaration,
+    RoomDeclaration, RoutingContract, SendReceipt, SequentialExecutor, SubscriptionDeclaration,
 };
 
 /// Driver fixture that confirms every accepted Delivery as processed.
@@ -61,12 +61,14 @@ fn configure<Driver: EventLoopDriver>(runtime: &mut KernelRuntime<Driver>, mailb
     let room = RoomAddress::new(10);
     let room_capacity = QueueCapacity::new(4).expect("fixture capacity is positive");
     let owner = ComponentDefinition::new(ComponentDefinitionId::new(1))
-        .with_room(RoomDeclaration::new(room, room_capacity));
-    let subscriber = ComponentDefinition::new(ComponentDefinitionId::new(2))
-        .with_subscription(SubscriptionDeclaration::new(room))
-        .with_mailbox_capacity(mailbox);
-    let outsider =
-        ComponentDefinition::new(ComponentDefinitionId::new(3)).with_mailbox_capacity(mailbox);
+        .with_routing(RoutingContract::new().with_room(RoomDeclaration::new(room, room_capacity)));
+    let subscriber = ComponentDefinition::new(ComponentDefinitionId::new(2)).with_routing(
+        RoutingContract::new()
+            .with_subscription(SubscriptionDeclaration::new(room))
+            .with_mailbox_capacity(mailbox),
+    );
+    let outsider = ComponentDefinition::new(ComponentDefinitionId::new(3))
+        .with_routing(RoutingContract::new().with_mailbox_capacity(mailbox));
     register(runtime, owner, ComponentInstanceId::new(1));
     register(runtime, subscriber, ComponentInstanceId::new(2));
     register(runtime, outsider, ComponentInstanceId::new(3));

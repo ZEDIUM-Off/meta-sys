@@ -85,6 +85,24 @@ pub trait EventLoopDriver: std::fmt::Debug {
         Ok(DeliveryProgress::Unobserved)
     }
 
+    /// Processes one dependency-free Delivery frontier, potentially concurrently.
+    ///
+    /// The default preserves slice order. Drivers may overlap entries because
+    /// the caller declares that their routing work is independent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DriverError`] when any Delivery cannot be processed.
+    fn process_delivery_front(
+        &mut self,
+        deliveries: &[Delivery],
+    ) -> Result<Vec<DeliveryProgress>, DriverError> {
+        deliveries
+            .iter()
+            .map(|delivery| self.process_delivery(delivery))
+            .collect()
+    }
+
     /// Stops one Component Runtime and releases Driver-owned execution state.
     ///
     /// # Errors

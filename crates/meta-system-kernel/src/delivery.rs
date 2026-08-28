@@ -2,13 +2,25 @@
 
 use crate::{ComponentInstanceId, Event, RoomAddress, RoomSequence};
 
+/// Routing operation that produced one Mailbox Delivery.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeliveryOrigin {
+    /// Distribution from one concrete FIFO Room acceptance step.
+    Room {
+        /// Stable logical Room address.
+        address: RoomAddress,
+        /// FIFO position local to the concrete Room lifecycle.
+        sequence: RoomSequence,
+    },
+    /// Direct distribution to registered broadcast listeners.
+    Broadcast,
+}
+
 /// One immutable Event placement offered to a subscribed Component Mailbox.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Delivery {
-    /// Logical Room that distributed this Event.
-    room: RoomAddress,
-    /// Room-local FIFO position assigned at acceptance.
-    sequence: RoomSequence,
+    /// Routing operation that produced this Delivery.
+    origin: DeliveryOrigin,
     /// Component Runtime whose Mailbox receives the Event.
     recipient: ComponentInstanceId,
     /// Sole common Event concept carried by every routing operation.
@@ -18,30 +30,36 @@ pub struct Delivery {
 impl Delivery {
     /// Creates one delivery attempt for an active subscription.
     #[must_use]
-    pub(crate) const fn new(
+    pub(crate) const fn from_room(
         room: RoomAddress,
         sequence: RoomSequence,
         recipient: ComponentInstanceId,
         event: Event,
     ) -> Self {
         Self {
-            room,
-            sequence,
+            origin: DeliveryOrigin::Room {
+                address: room,
+                sequence,
+            },
             recipient,
             event,
         }
     }
 
-    /// Returns the logical Room that distributed this Event.
+    /// Creates one direct Delivery to a registered broadcast listener.
     #[must_use]
-    pub const fn room(&self) -> RoomAddress {
-        self.room
+    pub(crate) const fn from_broadcast(recipient: ComponentInstanceId, event: Event) -> Self {
+        Self {
+            origin: DeliveryOrigin::Broadcast,
+            recipient,
+            event,
+        }
     }
 
-    /// Returns the Room-local FIFO position.
+    /// Returns the routing operation that produced this Delivery.
     #[must_use]
-    pub const fn sequence(&self) -> RoomSequence {
-        self.sequence
+    pub const fn origin(&self) -> DeliveryOrigin {
+        self.origin
     }
 
     /// Returns the destination Component Instance.

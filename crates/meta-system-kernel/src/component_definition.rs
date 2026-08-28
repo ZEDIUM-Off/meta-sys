@@ -1,9 +1,6 @@
 //! Static and complete declarations of Components.
 
-use crate::{
-    Capability, ComponentDefinitionId, QueueCapacity, Requirement, RoomDeclaration,
-    SubscriptionDeclaration,
-};
+use crate::{Capability, ComponentDefinitionId, Requirement, RoutingContract};
 
 /// The complete declarative identity and contributions of a Component.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,12 +11,8 @@ pub struct ComponentDefinition {
     requirements: Vec<Requirement>,
     /// Capability offers contributed to the System Graph.
     capabilities: Vec<Capability>,
-    /// Logical Rooms materialized only while an Instance is Active.
-    rooms: Vec<RoomDeclaration>,
-    /// Room relations materialized into the active Runtime Mailbox.
-    subscriptions: Vec<SubscriptionDeclaration>,
-    /// Explicit bound of each concrete Runtime Mailbox.
-    mailbox_capacity: QueueCapacity,
+    /// Complete Room, Mailbox, emit, and broadcast contribution.
+    routing: RoutingContract,
 }
 
 impl ComponentDefinition {
@@ -30,9 +23,7 @@ impl ComponentDefinition {
             id,
             requirements: Vec::new(),
             capabilities: Vec::new(),
-            rooms: Vec::new(),
-            subscriptions: Vec::new(),
-            mailbox_capacity: QueueCapacity::DEFAULT,
+            routing: RoutingContract::new(),
         }
     }
 
@@ -50,24 +41,10 @@ impl ComponentDefinition {
         self
     }
 
-    /// Adds one logical Room contribution to this complete declaration.
+    /// Sets the complete cohesive Event routing contribution.
     #[must_use = "builder methods return the updated Component Definition"]
-    pub fn with_room(mut self, room: RoomDeclaration) -> Self {
-        self.rooms.push(room);
-        self
-    }
-
-    /// Adds one declared routing relation to this Component's Mailbox.
-    #[must_use = "builder methods return the updated Component Definition"]
-    pub fn with_subscription(mut self, subscription: SubscriptionDeclaration) -> Self {
-        self.subscriptions.push(subscription);
-        self
-    }
-
-    /// Sets the explicit bound of each concrete Runtime Mailbox.
-    #[must_use = "builder methods return the updated Component Definition"]
-    pub const fn with_mailbox_capacity(mut self, capacity: QueueCapacity) -> Self {
-        self.mailbox_capacity = capacity;
+    pub fn with_routing(mut self, routing: RoutingContract) -> Self {
+        self.routing = routing;
         self
     }
 
@@ -89,21 +66,9 @@ impl ComponentDefinition {
         &self.capabilities
     }
 
-    /// Returns logical Rooms in declaration order.
+    /// Returns the complete cohesive Event routing contribution.
     #[must_use]
-    pub fn rooms(&self) -> &[RoomDeclaration] {
-        &self.rooms
-    }
-
-    /// Returns Room relations in declaration order.
-    #[must_use]
-    pub fn subscriptions(&self) -> &[SubscriptionDeclaration] {
-        &self.subscriptions
-    }
-
-    /// Returns the explicit concrete Runtime Mailbox bound.
-    #[must_use]
-    pub const fn mailbox_capacity(&self) -> QueueCapacity {
-        self.mailbox_capacity
+    pub const fn routing(&self) -> &RoutingContract {
+        &self.routing
     }
 }
