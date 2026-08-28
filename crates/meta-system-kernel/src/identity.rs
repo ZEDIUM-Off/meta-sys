@@ -83,3 +83,51 @@ impl EffectId {
         Self(value)
     }
 }
+
+/// Identifies one Addon that owns extension semantics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AddonId(u64);
+
+impl AddonId {
+    /// Creates an opaque Addon identity from a host-provided value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+/// Identifies one Facet Schema owned by a System Addon.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FacetSchemaId(u64);
+
+impl FacetSchemaId {
+    /// Creates an opaque Facet Schema identity from an Addon-provided value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+/// Identifies one typed Facet attached to a graph entity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FacetId(u64);
+
+impl FacetId {
+    /// Creates an opaque Facet identity from an Addon-provided value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+/// Identifies one structural Context in a System Graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ContextId(u64);
+
+impl ContextId {
+    /// Creates an opaque Context identity from a host-provided value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+}

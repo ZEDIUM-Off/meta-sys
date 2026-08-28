@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     Binding, Capability, CapabilityId, ComponentDefinition, ComponentDefinitionId,
-    ComponentInstance, ComponentInstanceId, ComponentRuntime, Effect, EffectId, KernelError,
-    Requirement, RequirementId,
+    ComponentInstance, ComponentInstanceId, ComponentRuntime, Context, ContextId, Effect, EffectId,
+    Facet, FacetId, FacetSchema, FacetSchemaId, KernelError, Requirement, RequirementId,
 };
 
 /// A declared Capability together with the Instance that publishes it.
@@ -34,6 +34,12 @@ pub struct GraphState {
     pub(super) runtimes: BTreeMap<ComponentInstanceId, ComponentRuntime>,
     /// Living Effects indexed by identity and governed by their owner lifecycle.
     pub(super) effects: BTreeMap<EffectId, Effect>,
+    /// Structural visibility and lifecycle scopes indexed by identity.
+    pub(super) contexts: BTreeMap<ContextId, Context>,
+    /// Addon-owned Facet contracts indexed by identity.
+    pub(super) facet_schemas: BTreeMap<FacetSchemaId, FacetSchema>,
+    /// Typed Facet attachments indexed by identity.
+    pub(super) facets: BTreeMap<FacetId, Facet>,
 }
 
 impl GraphState {
@@ -97,65 +103,5 @@ impl GraphState {
             }
         }
         Ok(())
-    }
-}
-
-/// A read-only observation of one Kernel Runtime's current System Graph.
-#[derive(Debug, Clone, Copy)]
-#[must_use = "a System Graph view must be queried to observe runtime state"]
-pub struct SystemGraph<'graph> {
-    /// Runtime-owned graph state borrowed for this observation.
-    state: &'graph GraphState,
-}
-
-impl<'graph> SystemGraph<'graph> {
-    /// Creates an observation tied to one Runtime's graph state.
-    pub(crate) const fn new(state: &'graph GraphState) -> Self {
-        Self { state }
-    }
-
-    /// Finds a complete Component Definition by identity.
-    #[must_use]
-    pub fn definition(&self, id: ComponentDefinitionId) -> Option<&ComponentDefinition> {
-        self.state.definitions.get(&id)
-    }
-
-    /// Finds a living Component Instance by identity.
-    #[must_use]
-    pub fn instance(&self, id: ComponentInstanceId) -> Option<&ComponentInstance> {
-        self.state.instances.get(&id)
-    }
-
-    /// Finds an inspectable Requirement by identity.
-    #[must_use]
-    pub fn requirement(&self, id: RequirementId) -> Option<&Requirement> {
-        self.state.requirements.get(&id)
-    }
-
-    /// Finds an inspectable Capability by identity.
-    #[must_use]
-    pub fn capability(&self, id: CapabilityId) -> Option<&Capability> {
-        self.state
-            .capabilities
-            .get(&id)
-            .map(|placement| &placement.capability)
-    }
-
-    /// Finds the explicit Binding resolving a Requirement, when one exists.
-    #[must_use]
-    pub fn binding(&self, id: RequirementId) -> Option<&Binding> {
-        self.state.bindings.get(&id)
-    }
-
-    /// Finds the living execution attached to an Active Component Instance.
-    #[must_use]
-    pub fn component_runtime(&self, id: ComponentInstanceId) -> Option<&ComponentRuntime> {
-        self.state.runtimes.get(&id)
-    }
-
-    /// Finds a living lifecycle-owned Effect by identity.
-    #[must_use]
-    pub fn effect(&self, id: EffectId) -> Option<&Effect> {
-        self.state.effects.get(&id)
     }
 }

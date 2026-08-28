@@ -1,6 +1,6 @@
 //! Typed Events accepted by the Kernel Runtime machine.
 
-use crate::{ComponentDefinition, ComponentInstanceId, Effect};
+use crate::{ComponentDefinition, ComponentInstanceId, Context, Effect, Facet, FacetSchema};
 
 /// A typed stimulus that can evolve one Kernel Runtime.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +21,21 @@ pub enum KernelEvent {
     UnregisterComponent {
         /// Component Instance that disappears from the System Graph.
         instance_id: ComponentInstanceId,
+    },
+    /// Introduces one structural Context into the System Graph.
+    RegisterContext {
+        /// Complete ownership and visibility scope.
+        context: Context,
+    },
+    /// Introduces one Addon-owned typed Facet Schema.
+    RegisterFacetSchema {
+        /// Complete schema contract made inspectable by this Event.
+        schema: FacetSchema,
+    },
+    /// Attaches one typed Facet to an eligible graph entity.
+    AttachFacet {
+        /// Complete Facet to validate and make inspectable.
+        facet: Facet,
     },
 }
 
@@ -47,5 +62,23 @@ impl KernelEvent {
     #[must_use]
     pub const fn unregister_component(instance_id: ComponentInstanceId) -> Self {
         Self::UnregisterComponent { instance_id }
+    }
+
+    /// Builds an Event that registers one structural Context.
+    #[must_use]
+    pub const fn register_context(context: Context) -> Self {
+        Self::RegisterContext { context }
+    }
+
+    /// Builds an Event that registers one Addon-owned Facet Schema.
+    #[must_use]
+    pub const fn register_facet_schema(schema: FacetSchema) -> Self {
+        Self::RegisterFacetSchema { schema }
+    }
+
+    /// Builds an Event that attaches one typed Facet.
+    #[must_use]
+    pub const fn attach_facet(facet: Facet) -> Self {
+        Self::AttachFacet { facet }
     }
 }

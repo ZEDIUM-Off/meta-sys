@@ -70,6 +70,9 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
             KernelEvent::UnregisterComponent { instance_id } => {
                 self.handle_unregistration(instance_id)
             }
+            KernelEvent::RegisterContext { context } => self.handle_context(context),
+            KernelEvent::RegisterFacetSchema { schema } => self.handle_facet_schema(schema),
+            KernelEvent::AttachFacet { facet } => self.handle_facet(facet),
         }
     }
 
@@ -140,6 +143,30 @@ impl<Driver: EventLoopDriver> KernelRuntime<Driver> {
         );
         self.graph.apply_removal(&plan);
         Ok(outcome)
+    }
+
+    /// Registers one structural Context after validating explicit scope links.
+    fn handle_context(
+        &mut self,
+        context: crate::Context,
+    ) -> Result<TransitionOutcome, KernelError> {
+        self.graph.register_context(context)?;
+        Ok(TransitionOutcome::empty())
+    }
+
+    /// Registers one Addon-owned Facet Schema.
+    fn handle_facet_schema(
+        &mut self,
+        schema: crate::FacetSchema,
+    ) -> Result<TransitionOutcome, KernelError> {
+        self.graph.register_facet_schema(schema)?;
+        Ok(TransitionOutcome::empty())
+    }
+
+    /// Validates and attaches one typed Facet to the System Graph.
+    fn handle_facet(&mut self, facet: crate::Facet) -> Result<TransitionOutcome, KernelError> {
+        self.graph.attach_facet(facet)?;
+        Ok(TransitionOutcome::empty())
     }
 
     /// Returns a read-only view of this Runtime's current System Graph.
