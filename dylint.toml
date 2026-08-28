@@ -1,0 +1,8 @@
+[[workspace.metadata.dylint.libraries]]
+path = "tools/dylint/meta_sys_style"
+
+[meta_sys_style]
+max_function_lines = 50
+max_function_arguments = 5
+max_functions_per_file = 12
+max_file_lines = 400

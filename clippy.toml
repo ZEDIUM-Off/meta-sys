@@ -1,0 +1,6 @@
+# Structural thresholds complement the project-specific checks in `dylint.toml`.
+cognitive-complexity-threshold = 15
+excessive-nesting-threshold = 4
+max-fn-params-bools = 1
+too-many-arguments-threshold = 5
+too-many-lines-threshold = 50

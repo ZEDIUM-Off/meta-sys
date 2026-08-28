@@ -1,0 +1,25 @@
+name: Rust quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install --yes libssl-dev pkg-config
+      - name: Install Dylint
+        run: cargo install --locked cargo-dylint dylint-link
+      - name: Run the Rust quality gate
+        run: make check

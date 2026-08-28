@@ -1,0 +1,42 @@
+error: function has 6 arguments; the limit is 2
+  --> $DIR/main.rs:2:1
+   |
+LL | / fn too_many_arguments(first: u8, second: u8, third: u8, fourth: u8, fifth: u8, sixth: u8) {
+LL | |     let _ = (first, second, third, fourth, fifth, sixth);
+LL | | }
+   | |_^
+   |
+   = help: introduce a cohesive input type or split the operation
+   = note: `#[deny(meta_sys_style)]` on by default
+
+error: function has 52 lines; the limit is 5
+  --> $DIR/main.rs:5:1
+   |
+LL | / fn too_many_lines() {
+LL | |     let value = 1;
+LL | |     let value = value + 1;
+LL | |     let value = value + 1;
+...  |
+LL | |     let _ = value;
+LL | | }
+   | |_^
+   |
+   = help: extract named steps or move a responsibility into a focused type
+
+error: source file has 73 lines; the limit is 20
+  --> $DIR/main.rs:1:1
+   |
+LL | // normalize-stderr-test: "/n$" -> ""
+   | ^
+   |
+   = help: split the file along a named responsibility or invariant
+
+error: source file has 14 functions; the limit is 2
+  --> $DIR/main.rs:58:1
+   |
+LL | fn helper_01() {}
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = help: move a cohesive group of functions into a focused module or type
+
+error: aborting due to 4 previous errors
