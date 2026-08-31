@@ -1,8 +1,10 @@
 # Project Conversations
 
-These ChatGPT conversations record the exploration that led to the current project direction.
+These ChatGPT conversations record the exploration that led to the project direction and to the
+runtime-first prototype that was later superseded.
 
-They are provenance, not specifications. When they conflict with repository documentation, `CONTEXT.md`, accepted ADRs, and the current code take precedence.
+They are provenance, not specifications. When they conflict with repository documentation,
+`CONTEXT.md`, accepted ADRs, and the current code take precedence.
 
 ## Primary kernel discussions
 
@@ -22,8 +24,16 @@ They are provenance, not specifications. When they conflict with repository docu
 
 ## Reading guidance
 
-Prefer the newest kernel discussion when terminology evolved between conversations.
+The early discussions correctly identify recursive `provides`/`requires` composition and reusable
+Capabilities as the central value. Their later promotion of Components, Events, a living graph,
+dynamic loading and distribution into universal Kernel primitives is superseded by
+[`ADR-0001`](../adr/0001-static-composition-first.md).
 
-In particular, `Mesh` and `Node` appeared during earlier distribution explorations. They are not current canonical terms and no concrete distribution Extension is frozen. The retained decision is narrower: communication or distribution may be introduced through Extension-defined semantics without enlarging the Kernel.
+Read [`docs/vision.md`](../vision.md) and [`docs/composition.md`](../composition.md) for the current
+static-first direction. Use the conversations only to understand how the trade-off was explored.
+
+In particular, `Mesh` and `Node` remain possible Capabilities introduced by Addons; they are not
+Meta-system primitives. `Extension`, `Component`, `Provider`, `Requirement` and `Binding` are not
+current canonical terms.
 
 Naming explorations such as Zeta, Valence, Coval, Metis, Zetis, and Mallea did not produce a final public name. Use `Meta-system` as the conceptual term and `meta-sys` as the repository name until a naming decision is recorded.

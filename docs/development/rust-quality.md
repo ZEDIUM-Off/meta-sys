@@ -23,7 +23,6 @@ bibliothèque Dylint seule.
 L’environnement de développement requiert :
 
 ```bash
-sudo apt-get install libssl-dev pkg-config # Debian ou Ubuntu
 rustup component add clippy rustfmt
 cargo install --locked cargo-dylint dylint-link
 ```

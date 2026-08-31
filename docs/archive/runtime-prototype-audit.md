@@ -1,10 +1,19 @@
-# Audit d’acceptation du premier prototype Kernel
+# Audit historique du prototype runtime-first
+
+> **Superseded.** Ce document prouve ce que le prototype runtime-first avait validé; il ne décrit
+> plus la direction du produit. Son code et ses tests restent consultables dans l’historique Git au
+> commit `71abdd1`. La direction actuelle est définie dans
+> [`ADR-0001`](../adr/0001-static-composition-first.md) et
+> [`docs/composition.md`](../composition.md).
 
 ## Verdict
 
 Les quatorze tracer bullets #2 à #15 satisfont leurs critères d’acceptation. Le prototype est validé par `make check`: 46 tests Rust, rustfmt, Clippy avec warnings interdits, rustdoc et les règles structurelles Dylint. Le test unitaire de copie ABI passe également sous Miri.
 
-Cet audit porte sur `main` au commit `8fa796e`, après les commits de décision et d’implémentation de l’ABI native. Les issues GitHub constituent le journal RED → GREEN; les chemins ci-dessous constituent les preuves durables dans le dépôt.
+Cet audit porte sur `main` au commit `8fa796e`, après les commits de décision et d’implémentation de
+l’ABI native. Les issues GitHub constituent le journal RED → GREEN; les chemins cités sont
+historiques et se lisent dans ce commit ou dans la dernière organisation du prototype au commit
+`71abdd1`.
 
 ## #2 — Baseline Rust 1.98 et premier crate Kernel
 

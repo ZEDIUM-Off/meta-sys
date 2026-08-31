@@ -17,8 +17,6 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Install native build dependencies
-        run: sudo apt-get update && sudo apt-get install --yes libssl-dev pkg-config
       - name: Install Dylint
         run: cargo install --locked cargo-dylint dylint-link
       - name: Run the Rust quality gate

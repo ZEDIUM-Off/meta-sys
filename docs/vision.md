@@ -2,54 +2,94 @@
 
 ## Thèse
 
-Le dépôt ne devrait pas rester l’unité fondamentale du logiciel. Un System doit être une composition vivante, portable et indépendante de la topologie qui l’exécute; le code n’en est qu’une contribution.
-
-Meta-system est un langage et orchestrateur minuscule et augmentable d’évolutions d’état explicites et calculées. Presque tout comportement du framework doit pouvoir se comprendre comme une machine à états réagissant à des Events:
+Un logiciel devrait pouvoir capitaliser sur des interfaces et des compositions réutilisables sans
+transformer chaque nouveau produit en nouveau framework. Meta-system fournit un langage Rust
+commun pour assembler des Addons versionnés au moyen de Capabilities typées.
 
 ```text
-Current State + Event → Next State
+Addon A
+    provides X
+
+Addon B
+    requires X
+    provides Y
+
+Addon C
+    requires Y
 ```
 
-Chaque Component est une machine à états. Le défi produit central est de résoudre et d’orchestrer efficacement l’ensemble de leurs états et relations, tout en offrant des interfaces intuitives aux développeurs.
+Un System est la fermeture résolue de cet assemblage. Meta-system vérifie sa cohérence pendant la
+compilation, puis le code s’exécute comme du Rust ordinaire.
 
-## Positionnement
+## Capitalisation
 
-Le Kernel est délibérément petit, neutre vis-à-vis des domaines et purement orchestratorial. Il ne possède seul aucune Capability métier ou tournée vers le monde extérieur. Les Addons augmentent progressivement cette base avec les capacités, politiques et expériences nécessaires, sans transformer leurs domaines en concepts du Kernel.
+Une Capability stabilisée devient une primitive disponible pour les futurs Addons. Un Addon étend
+le langage du System en utilisant des Capabilities existantes pour en exposer de nouvelles, sans
+hériter des Addons précédents ni modifier leur code.
 
-La simplicité et l’optimisation sont des objectifs simultanés. Le modèle doit rendre l’exécution parallèle structurellement possible dès l’origine lorsque les dépendances le permettent, et préserver un comportement local compréhensible et déterministe lorsque l’ordre importe.
+```text
+ByteWrite → Log → StructuredLog → Audit
+```
 
-Le graphe vivant, plutôt que le dépôt ou le déploiement, est l’objet de composition. Les dépendances, Requirements, Capabilities et Bindings restent explicites afin que l’évolution du System soit inspectable et explicable. Cette explicitation facilite la composition; elle ne remplace ni la compréhension du modèle par les développeurs ni la conception correcte des Addons.
+Cette récursion permet de construire progressivement des familles cohérentes d’Addons pour le CLI,
+les processus, les services, le réseau, les interfaces ou de nouveaux paradigmes comme un mesh.
+Les Addons de liaison entre ces domaines restent des Addons ordinaires décrits par les mêmes trois
+clauses.
 
-La base fondatrice doit rester open source. La portabilité appartient au modèle, pas à une offre privilégiée.
+## Frontière
 
-## Composition par Addons
+Meta-system compose du code; il ne remplace pas le code.
 
-**Addon** est le terme canonique. Un Loader Addon augmente le chargement, un System Addon contribue au System et un Runner Addon augmente l’exécution ou la supervision. Une même unité peut cumuler ces rôles ou augmenter les machines à états introduites par d’autres Addons.
+Le framework n’impose ni machine à états, ni Event, ni scheduler, ni conteneur global, ni chargement
+dynamique. Un Addon reste libre d’employer Tokio, des threads, des acteurs, des callbacks ou aucune
+infrastructure particulière. Un runtime, un gestionnaire de processus ou un daemon peuvent être
+apportés par des Addons sans devenir des primitives de Meta-system.
 
-Le même Kernel peut composer, par exemple:
+Cargo reste responsable des crates et de leur compilation. Meta-system ajoute la résolution
+sémantique des Capabilities et des Addon Contracts. Il ne réécrit pas le workspace utilisateur et
+ne génère pas le code métier du System.
 
-- une application de type IDE avec des Addons d’interface utilisateur, de filesystem et de Git;
-- une application de type navigateur avec des Addons d’interface utilisateur, de navigation et de réseau;
-- une application unique réunissant ces compositions.
+## Unités de version
 
-Ces exemples ne sont ni des primitives du Kernel ni une feuille de route imposée. Une application possède un Runtime. Des applications autonomes ont donc des Runtimes distincts; leur communication pourra éventuellement être apportée par des Addons, sans faire d’un maillage distribué une primitive du Kernel.
+Seuls les Addons sont versionnés. Toutes les Capabilities publiques définies par un Addon font
+partie de son interface versionnée; une rupture de l’une d’elles impose une version majeure de cet
+Addon.
 
-## Chargement et confiance
+Les sources, registries, révisions Git et caches ne relèvent pas du composeur. Un futur gestionnaire
+d’Addons pourra les préparer avant la compilation, idéalement en s’appuyant sur Cargo et un store
+partagé plutôt qu’en reconstruisant un package manager complet.
 
-Le chargement dynamique est précieux et peut suivre une approche proche de Cordis. Du code natif exécuté dans le processus est toutefois réputé de confiance par le fait même de son intégration: un Requirement exprime un besoin de composition, jamais une autorisation ni une frontière de sécurité.
+## Exemples de Systems
 
-Permissions, politiques, sandbox, distribution, stockage et autres capacités produit relèvent des Addons ou des choix de l’intégrateur. Meta-system préfère une petite base progressivement augmentée à un système abstrait de vérification ou à des primitives spéculatives.
+Un outil terminal peut composer des Addons de flux, CLI, templating et logging. Le CLI et le
+logging importent la même Capability d’écriture, exposée une seule fois, tandis que le logging
+construit une nouvelle Capability `Log` au-dessus d’elle.
 
-## Relation à Cordis
-
-Cordis et `cordis-rs` sont des références pragmatiques, non l’architecture cible. Meta-system en retient les idées qui servent son modèle minimal, notamment la résolution réactive, les Effects possédés par un cycle de vie, les Component Instances vivantes et la distinction `Pending`/`Active`.
+Un System de services peut ajouter processus, daemon et SSH. Des Addons supplémentaires peuvent
+alors exposer des Capabilities de nœud, mesh ou placement, sans que Meta-system connaisse ces
+domaines. Les surfaces CLI ou web restent optionnelles en ajoutant seulement les Addons qui les
+relient aux Capabilities existantes.
 
 ## Non-objectifs
 
-- Faire du Kernel une plateforme métier, une bibliothèque standard ou un catalogue de capacités.
-- Faire des permissions, de la sandbox ou d’un maillage inter-Runtime des primitives du Kernel.
-- Figer maintenant les futurs Addons, produits ou modes de distribution.
+- Définir le runtime universel d’un programme.
+- Remplacer Cargo, rustc ou le code Rust ordinaire.
+- Découvrir magiquement des crates absentes du graphe de dépendances préparé pour Cargo.
+- Versionner chaque Capability indépendamment de son Addon propriétaire.
+- Introduire `Component`, `Provider`, `Requirement` ou `Binding` dans le langage public.
+- Figer maintenant un registry, un format de package, une ABI dynamique ou un modèle distribué.
 
 ## Direction proche
 
-Le travail immédiat consiste à valider le plus petit modèle cohérent d’état, de résolution et d’Events, ainsi que sa capacité à orchestrer efficacement des Components indépendants. L’implémentation Rust sert cette validation sans figer prématurément l’API publique ni la forme des futurs Addons.
+Le prochain travail consiste à valider la plus petite interface Rust directement compilable pour:
+
+1. définir une Capability;
+2. déclarer un Addon Contract;
+3. exposer une implémentation avec `provides`;
+4. recevoir des imports `requires` et `optional` typés;
+5. résoudre une chaîne et un diamant sans duplication;
+6. produire des diagnostics explicites pour les absences, collisions, cycles et versions
+   incompatibles.
+
+Le prototype runtime-first précédent reste une exploration historique. Il ne contraint plus cette
+interface.

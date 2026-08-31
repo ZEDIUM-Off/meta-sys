@@ -1,4 +1,8 @@
-# Native Component ABI v1
+# Native Component ABI v1 — archive
+
+> **Superseded.** Cette ABI appartenait au prototype runtime-first supprimé du workspace actif. Elle
+> est conservée uniquement comme trace de la décision et de son audit; Meta-system ne prévoit
+> actuellement aucune ABI dynamique dans son noyau de composition statique.
 
 ## Décision
 

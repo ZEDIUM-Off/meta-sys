@@ -6,7 +6,8 @@ How engineering skills should consume the domain documentation for this reposito
 
 - Read `CONTEXT.md` before naming or changing project concepts.
 - Read `docs/vision.md` when work affects product scope, milestones, or positioning.
-- Read `docs/kernel.md` when work affects kernel primitives, extension boundaries, lifecycle, requirements, facets, bindings, effects, or distribution.
+- Read `docs/composition.md` when work affects Addons, Capabilities, Contracts, Resolution,
+  versioning, source management, or extension boundaries.
 - Read relevant files under `docs/adr/` when that directory exists.
 
 If one of these files does not exist, proceed silently.
@@ -20,7 +21,7 @@ This repository uses a single-context layout:
 ├── CONTEXT.md
 ├── docs/
 │   ├── vision.md
-│   ├── kernel.md
+│   ├── composition.md
 │   ├── agents/
 │   ├── references/
 │   └── adr/              # created when the first ADR is warranted
@@ -39,11 +40,12 @@ If a required concept is absent or a term is overloaded, resolve the vocabulary 
 
 `docs/vision.md` contains product direction.
 
-`docs/kernel.md` contains the current architectural direction and explicitly marks open questions.
+`docs/composition.md` contains the current architectural direction and explicitly marks open
+questions.
 
 ADRs contain decisions that were hard to reverse, surprising without context, and selected through a genuine trade-off.
 
-Do not silently promote a working hypothesis from `docs/kernel.md` into a settled decision.
+Do not silently promote a working hypothesis from `docs/composition.md` into a settled decision.
 
 ## Flag conflicts
 
